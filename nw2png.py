@@ -63,14 +63,31 @@ def apply_effect(img, effect):
     for x in range(img.size[0]):
         for y in range(img.size[1]):
             old = map(lambda x: x/255.0, px[x,y])
-            value = sum(old[:3])/3.0 * old[3]
-            alpha = value * effect[3]
-            # red = old[0] * effect[0]
-            # grn = old[1] * effect[1]
-            # blu = old[2] * effect[2]
-            new = map(lambda x: int(x*255), effect[:3]+[alpha])
+            new = [int(old[i] * effect[i]*255) for i in range(4)]
             px[x,y] = tuple(new)
+
             
+def add_composite(dest, blit):
+    """
+    Takes two PIL Image objects of the same size as arguments and adds
+    their color channels together, and returns a 3rd image.
+    """
+    assert dest.size == blit.size
+    bg_data = dest.load()
+    fg_data = blit.load()
+    out = Image.new('RGBA', blit.size)
+    out_data = out.load()
+
+    for x in range(blit.size[0]):
+        for y in range(blit.size[1]):
+            data = []
+            for c in range(4):
+                lhs = bg_data[x,y][c]
+                rhs = fg_data[x,y][c]
+                data.append(min(lhs+rhs, 255))
+            out_data[x,y] = tuple(data)
+    return out
+
 
 def add_actors(out_img, actors):
     for npc in actors:
@@ -97,7 +114,11 @@ def add_actors(out_img, actors):
             
             paste_box = make_box(*paste_shape)
             bg = out_img.crop(paste_box)
-            mixed = Image.alpha_composite(bg, sprite)
+            mixed = None
+            if npc["effect"]:
+                mixed = add_composite(bg, sprite)
+            else:
+                mixed = Image.alpha_composite(bg, sprite)
             out_img.paste(mixed, paste_box)
 
             
