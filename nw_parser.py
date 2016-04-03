@@ -227,11 +227,12 @@ def parse_npcs(path):
         rhs_x = rhs["zoom"][0] if rhs["zoom"] else rhs["x"]
         rhs_y = rhs["zoom"][1] if rhs["zoom"] else rhs["y"]
 
-        a = lhs_y + lhs_height
-        b = rhs_y + rhs_height
-        if a<b:
+        a = lhs_y + (lhs_height / TILE_SIZE)
+        b = rhs_y + (rhs_height / TILE_SIZE)
+            
+        if a < b:
             return -1
-        elif a>b:
+        elif a > b:
             return 1
         elif lhs_x < rhs_x:
             return -1
