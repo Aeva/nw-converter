@@ -1,0 +1,8 @@
+*.nw
+*.png
+*.gif
+sprites/
+out/
+*~
+*.csv
+*.pyc

@@ -1,0 +1,34 @@
+Collection of scripts for converting graal ".nw" level files and
+corresponding game data into png image files.
+
+This might later also later include a tool for converting ".nw" files
+to a format supported by the tiled map editor, but that functionality
+is not present at the time of writing.
+
+My interest in converting level files to images is for archival
+purposes and nostalgia.
+
+To use this script, create a directory within this project called
+sprites and copy your pics1.png file into that directory, as well as
+any folders of images to be used by NPCs.
+
+You can then run the following commands:
+
+ > python nw2png.py path_to_level.nw [alternate_pics1.png] [alternate output file]
+ > python batch.py folder_of_levels [alternate_pics1.png]
+ > python nw_parser.py path_to_level.nw
+
+nw2png.py converts a level and its npcs to a png file.  It is able to do
+light effects, zoom, and reposition npcs based on their scripts.
+
+batch.py calls nw2png on the level files in a provided folder
+
+nw_parser.py is a .nw parser, and when called directly, it outputs
+debug info.  nw_parser.py is imported by nw2png.py
+
+
+All of the python source files in this repository are released under
+the GNU General Public License version 3.
+
+The notes.org file is released under the Creative Commons Attribution
+Share-alike 4.0 license.

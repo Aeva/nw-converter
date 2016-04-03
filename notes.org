@@ -1,0 +1,103 @@
+
+I found [[http://forums.graalonline.com/forums/showthread.php?t%3D80476][this forum post]] that explains the board layout, which is
+quoted below with some corrections:
+
+#+BEGIN_QUOTE
+file header:
+
+GLEVNW01 - File version string
+
+file body:
+
+For each horizontal row containing any modifications:
+
+BOARD - Prefix for board data
+(real) - X position of the board data (always 0 in practice)
+(real) - Y position of the board data (between 0 and 32)
+(real) - Run of the board data (always 64 in practice)
+(real) - Layer of the board data (always 0 because layers were never implemented in the editor)
+
+(string)[run] - Contains tile data in repeated sequences of 'XX' where 'XX' is a base64 string.
+
+NPC - Prefix for Oldscript NPC data
+(string) - Contains NPC's image file (- if no image)
+(real) - NPC X position on the board
+(real) - NPC Y position on the board
+(string) - Contains entire NPC's script
+NPCEND - Marks the end of the NPC
+
+file footer:
+
+File is null terminated 
+#+END_QUOTE
+
+What follows is python code and notes for mapping the tile data as
+stored in the board to coordinates from the pics1.png tile map:
+
+#+BEGIN_SRC python
+import string
+data = open("worldp-08.nw", "r").readlines()
+b64 = string.ascii_uppercase + string.ascii_lowercase + string.digits + "+/"
+
+def decode(aa):
+    lhs = b64.index(aa[0])*64
+    rhs = b64.index(aa[1])
+    return lhs + rhs
+
+lines = open("test.nw", "r").readlines()
+row = data[line][16:].strip()
+#+END_SRC
+
+[[file:test.nw::BOARD%200%200%2064%200%20AAABACADAEAFAGAHAIAJAKALAMANAOAPIAIBICIDIEIFIGIHIIIJIKILIMINIOIPQAQBQCQDQEQFQGQHQIQJQKQLQMQNQOQPYAYBYCYDYEYFYGYHYIYJYKYLYMYNYOYP][Test.nw]] reveals the tile arrangement pattern.  The tile set is
+arranged in memory to have a X width of 32.  The tile set itself is 32
+tiles in height though.
+
+So I thiiiiink we can do something like this:
+di = data tile index.  Some value between 0 and 4095, base64.
+tx, ty = editor tile coordinates.  tx is always 0-15.  ty is 0-255
+bx, by = apparent board coordinates; eg as they are laid out in the
+image.
+
+#+BEGIN_SRC python
+tx = di % 16
+ty = di/16 # python rounds this down
+#+END_SRC
+
+EG, IA = 512.  So:
+
+#+BEGIN_SRC python
+tx = 512 % 16 # 0
+ty = 512 / 16 # 32
+#+END_SRC
+
+but we want it to be
+#+BEGIN_SRC python
+bx = 16
+by = 0
+#+END_SRC
+So...
+
+#+BEGIN_SRC python
+bx = ty / 32 * 16 + tx
+by = ty % 32
+#+END_SRC
+
+Lets try this with the next one right and down:
+
+#+BEGIN_SRC python
+IR = 529
+tx = 1
+ty = 33
+bx = 17
+by = 1
+#+END_SRC
+
+Looks good I think?  So the final equation should look like this:
+
+#+BEGIN_SRC python
+di = decode('//')
+tx = di % 16
+ty = di / 16
+bx = ty / 32 * 16 + tx
+by = ty % 32 
+#+END_SRC
