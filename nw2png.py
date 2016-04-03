@@ -48,7 +48,7 @@ def generate_map(board, tiles):
     img = Image.new('RGBA',(64*16, 64*16))
     for x in range(64):
         for y in range(64):
-            tile_x, tile_y = board[x][y]["board"]
+            tile_x, tile_y = board[x][y]["sprite"]
             try:
                 tile = tiles[tile_x][tile_y]
                 box = tile_box(x, y)

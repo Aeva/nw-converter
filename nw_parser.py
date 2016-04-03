@@ -25,6 +25,14 @@ TILE_SIZE = 16
 
 
 def decode_tile(aa):
+    """
+    This method is called by parse_tile, and does not need to be called
+    directly.  This function takes a pair of characters 'XX' which
+    represents a number in base64, and determines the x,y coordinate
+    encoded in that number.
+
+    The return value is a dictionary that describes the tile.
+    """
     lhs = BASE64.index(aa[0])*64
     rhs = BASE64.index(aa[1])
     di = lhs + rhs
@@ -36,12 +44,26 @@ def decode_tile(aa):
         "code" : aa,
         "index" : di,
         "__t_xy" : (tx, ty),
-        "board" : (bx, by),
+        "sprite" : (bx, by),
     }
     return tile
 
 
 def parse_tile(path):
+    """
+    Takes a path to a .nw file, and parses out the tile information.
+    The returned object should be useful for mapping from positions on
+    the board to the tile map for the board.
+
+    The returned object is a two-dimensional array, such that you can
+    read from it like so:
+
+    > level_tiles = parse_tile("some_level.nw")
+    > sprite_xy = level_tiles[x][y]["sprite"]
+
+    In the above example, "sprite_xy" will be the coordinates of the
+    sprite for the tile in pics1.png.
+    """
     lines = open(path, "r").readlines()
     board = [[None for y in range (64)] for x in range(64)]
     pattern = r'BOARD (\d+) (\d+) (\d+) (\d+) ([{0}]+)'.format(BASE64)
@@ -56,12 +78,16 @@ def parse_tile(path):
                 encoded = data[i:i+2]
                 tile = decode_tile(encoded)
                 board[x][y] = tile
-
-    #row = data[line][16:].strip()
     return board
 
 
 def img_search(img_name):
+    """
+    This method recursively searches the "sprites" directory for the
+    first image file that matches img_name, and returns its path.
+
+    This is used for looking up the sprite needed to draw NPCs.
+    """
     name = ".".join(img_name.split(".")[:-1])
     extensions = ["png", "gif"]
     tree = os.walk('sprites', True, None, True)
@@ -74,6 +100,17 @@ def img_search(img_name):
 
 
 def parse_npcs(path):
+    """
+    This function takes a path name for a .nw file, and attempts to
+    parse data about the NPCs stored within.
+
+    As this is intended more as an aid to printing out a static image,
+    some fuzzy grepping of the NPC scripts is done to determine things
+    like transparency effects, zoom effects, adjusted coordinates, and
+    possibly other things.
+
+    The result is a dict that describes how to draw the NPC.
+    """
     leveldata = open(path, "r").read().replace('\r\n', '\n')
     pattern = r'^NPC ([^\s]+) (\d+) (\d+)$(.+?)NPCEND$'
     offset_x_patterns = [
