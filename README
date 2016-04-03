@@ -30,5 +30,5 @@ debug info.  nw_parser.py is imported by nw2png.py
 All of the python source files in this repository are released under
 the GNU General Public License version 3.
 
-The notes.org file is released under the Creative Commons Attribution
-Share-alike 4.0 license.
+The nw_file_specification.org file is released under the Creative
+Commons Attribution Share-alike 4.0 license.
