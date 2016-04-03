@@ -210,6 +210,13 @@ def parse_npcs(path):
                 new_y = old_y + (((new_height - old_height) / 2.0) * -1) / TILE_SIZE
                 actor["zoom"] = [new_x, new_y, new_width, new_height, zoom]
 
+        if actor["src"].count("join flickerlights;"):
+            # 2k1-specific hack.  possibly should just hide images
+            # with the word "light" in them if they don't call set
+            # effect, but only on levels where at least one npc uses
+            # seteffect.
+            img_path = None
+
         actor["img"] = img_path;
         structs.append(actor)
 
