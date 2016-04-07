@@ -147,5 +147,17 @@ if __name__ == "__main__":
     board = parse_tile(level_path)
     tiles = tile_segments(tiles_path)
     out_img = generate_map(board, tiles)
-    add_actors(out_img, parse_npcs(level_path))
+    layers = {
+        "normal" : [],
+        "light" : [],
+    }
+    for npc in parse_npcs(level_path):
+        if npc["layer"] < 2:
+            layers["normal"].append(npc)
+        else:
+            layers["light"].append(npc)
+    
+    add_actors(out_img, layers["normal"])
+    # TODO apply area lighting here
+    add_actors(out_img, layers["light"])
     out_img.convert("RGB").save(out_path)
