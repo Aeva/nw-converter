@@ -133,7 +133,7 @@ def parse_npcs(path):
             "zoom" : None, # or, newx, newy, newwidth, newheight, scale_factor
             "src" : npc[3].strip() or '',
             "effect" : None,
-            "light" : False,
+            "layer" : 0,
         }
 
         def do_move(axis, actor, match):
@@ -183,8 +183,14 @@ def parse_npcs(path):
                 actor["area"][3] = img.size[1]
 
         if actor["src"].count("drawaslight;"):
-            actor["light"] = True
+            actor["layer"] = 2
 
+        elif actor["src"].count("drawunderplayer;"):
+            actor["layer"] = -1
+
+        elif actor["src"].count("drawoverplayer;"):
+            actor["layer"] = 1
+        
         if actor["src"].count("setcoloreffect"):
             pattern = r'setcoloreffect ?([\d/*.+-]+) ?, ?([\d/*.+-]+)?, ?([\d/*.+-]+)?, ?([\d/*.+-]+);'
             found = re.findall(pattern, actor["src"])
@@ -221,9 +227,9 @@ def parse_npcs(path):
         structs.append(actor)
 
     def sort_fn(lhs, rhs):
-        if not lhs["light"] and rhs["light"]:
+        if lhs["layer"] < rhs["layer"]:
             return -1
-        elif lhs["light"] and not rhs["light"]:
+        elif lhs["layer"] > rhs["layer"]:
             return 1
 
         lhs_height = lhs["zoom"][3] if lhs["zoom"] else lhs["area"][3]
