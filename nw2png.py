@@ -81,10 +81,12 @@ def add_composite(dest, blit):
     for x in range(blit.size[0]):
         for y in range(blit.size[1]):
             data = []
-            for c in range(4):
+            alpha = fg_data[x,y][3]/255.0
+            for c in range(3):
                 lhs = bg_data[x,y][c]
-                rhs = fg_data[x,y][c]
+                rhs = int(fg_data[x,y][c] * alpha)
                 data.append(min(lhs+rhs, 255))
+            data.append(1)
             out_data[x,y] = tuple(data)
     return out
 
