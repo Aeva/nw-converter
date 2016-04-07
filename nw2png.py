@@ -17,7 +17,7 @@
 import os
 import sys
 from PIL import Image
-from nw_parser import parse_tile, parse_npcs
+from nw_parser import parse_tile, parse_npcs, parse_area_effect
 
 TILE_SIZE = 16
 
@@ -66,6 +66,22 @@ def apply_effect(img, effect):
             new = [int(old[i] * effect[i]*255) for i in range(4)]
             px[x,y] = tuple(new)
 
+
+def apply_area_effect(img, effect):
+    data = img.load()
+    for x in range(img.size[0]):
+        for y in range(img.size[1]):
+            pixel = []
+            alpha = 1.0-effect[3]
+            multiplied = [i*alpha for i in effect[:3]]
+            for c in range(3):
+                # if data[x,y][0] > 0:
+                #     import pdb; pdb.set_trace()
+                pixel.append(int((data[x,y][c]/255.0 * alpha + effect[c]) * 255))
+                #pixel.append(int(data[x,y][c]/255.0 + multiplied[c] * 255))
+            pixel.append(255)
+            data[x,y] = tuple(pixel)
+                
             
 def add_composite(dest, blit):
     """
@@ -158,6 +174,12 @@ if __name__ == "__main__":
             layers["light"].append(npc)
     
     add_actors(out_img, layers["normal"])
+    effects = parse_area_effect(level_path)
+    if len(effects) == 1:
+        apply_area_effect(out_img, effects[0])
+    elif len(effects) > 1:
+        print "multiple area lighting effects detected"
+    
     # TODO apply area lighting here
     add_actors(out_img, layers["light"])
     out_img.convert("RGB").save(out_path)

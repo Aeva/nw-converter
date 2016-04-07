@@ -99,6 +99,26 @@ def img_search(img_name):
     return None
 
 
+def parse_area_effect(path):
+    """
+    This function takes a path name for a .nw file, and returns a list
+    of color filters that might be applied to the level by NPC
+    scripts.
+    """
+    leveldata = open(path, "r").read()
+    pattern = r'seteffect ?([\d/*.+-]+) ?, ?([\d/*.+-]+)?, ?([\d/*.+-]+)?, ?([\d/*.+-]+);'
+
+    effects = []
+    found = re.findall(pattern, leveldata)
+    if found:
+        try:
+            effects.append(map(lambda x: float(eval(x)) if len(x) > 0 else 0.0, found[0]))
+        except Exception as error:
+            print "error parsing:", found[0]
+            print error
+    return effects
+            
+
 def parse_npcs(path):
     """
     This function takes a path name for a .nw file, and attempts to
