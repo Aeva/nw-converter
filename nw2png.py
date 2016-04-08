@@ -67,19 +67,20 @@ def apply_effect(img, effect):
             px[x,y] = tuple(new)
 
 
+def clamp(value, high=1.0, low=0.0):
+    return max(min(value, high), low)
+
+
 def apply_area_effect(img, effect):
     data = img.load()
     for x in range(img.size[0]):
         for y in range(img.size[1]):
             pixel = []
-            alpha = 1.0-effect[3]
-            multiplied = [i*alpha for i in effect[:3]]
+            alpha = clamp(1.0-effect[3])
             for c in range(3):
-                # if data[x,y][0] > 0:
-                #     import pdb; pdb.set_trace()
-                pixel.append(int((data[x,y][c]/255.0 * alpha + effect[c]) * 255))
-                #pixel.append(int(data[x,y][c]/255.0 + multiplied[c] * 255))
-            pixel.append(255)
+                darkened = data[x,y][c] * alpha
+                tinted = darkened + (effect[c] * 255)
+                pixel.append(min(int(tinted), 255))
             data[x,y] = tuple(pixel)
                 
             
