@@ -100,12 +100,14 @@ class DotGraalParser(LevelParser):
         test = raw[after_tiles:]
         assert len(tiles) == stop_at
 
-        for di in range(len(tiles)):
-            tile = tiles[di]
-            y = int(math.floor(di/64.0))
-            x = di%64
-            bx = y / 32 * 16 + x
-            by = y % 32 
+        for i in range(len(tiles)):
+            y = int(math.floor(i/64.0))
+            x = i%64
+            tile = tiles[i]
+            tx = tile % 16
+            ty = tile / 16
+            bx = ty / 32 * 16 + tx
+            by = ty % 32 
             self.board[x][y] = (bx, by)
 
         
