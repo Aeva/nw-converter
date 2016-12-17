@@ -104,11 +104,8 @@ class DotGraalParser(LevelParser):
             tile = tiles[di]
             y = int(math.floor(di/64.0))
             x = di%64
-            # the following is wrong, but sorta works:
-            tx = di % 16
-            ty = di / 16
-            bx = ty / 32 * 16 + tx
-            by = ty % 32 
+            bx = y / 32 * 16 + x
+            by = y % 32 
             self.board[x][y] = (bx, by)
 
         
