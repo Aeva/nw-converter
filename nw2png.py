@@ -17,9 +17,20 @@
 import os
 import sys
 from PIL import Image
-from nw_parser import parse_tile, parse_npcs, parse_area_effect
+from nw_parser import DotNWParser
+from graal_parser import DotGraalParser
+
 
 TILE_SIZE = 16
+
+
+def load_level(level_path):
+    for parser in [DotNWParser, DotGraalParser]:
+        try:
+            return parser(level_path)
+        except AssertionError:
+            continue
+    raise Exception("Unable to determine level file format: %s" % level_path)
 
 
 def make_box(x, y, w=TILE_SIZE, h=TILE_SIZE):
@@ -48,7 +59,7 @@ def generate_map(board, tiles):
     img = Image.new('RGBA',(64*16, 64*16))
     for x in range(64):
         for y in range(64):
-            tile_x, tile_y = board[x][y]["sprite"]
+            tile_x, tile_y = board[x][y]
             try:
                 tile = tiles[tile_x][tile_y]
                 box = tile_box(x, y)
@@ -109,23 +120,23 @@ def add_composite(dest, blit):
 
 
 def add_actors(out_img, actors):
-    for npc in actors:
-        if npc["img"]:
-            img_path = npc["img"]            
+    for actor in actors:
+        if actor.image:
+            img_path = actor.image
             img = Image.open(img_path).convert("RGBA")
                                 
-            shape = npc["area"]
+            shape = actor.clip
             sprite = img.crop(make_box(*shape))
 
-            if npc["effect"]:
-                apply_effect(sprite, npc["effect"])
+            if actor.effect:
+                apply_effect(sprite, actor.effect)
 
-            x = npc["x"] * TILE_SIZE
-            y = npc["y"] * TILE_SIZE
+            x = actor.x * TILE_SIZE
+            y = actor.y * TILE_SIZE
             paste_shape = [x, y] + list(sprite.size)
 
-            if npc["zoom"]:
-                new_x, new_y, new_w, new_h, scale = npc["zoom"]
+            if actor.zoom:
+                new_x, new_y, new_w, new_h, scale = actor.zoom
                 sprite = sprite.resize([new_w, new_h])
                 x = new_x * TILE_SIZE
                 y = new_y * TILE_SIZE
@@ -134,7 +145,7 @@ def add_actors(out_img, actors):
             paste_box = make_box(*paste_shape)
             bg = out_img.crop(paste_box)
             mixed = None
-            if npc["effect"]:
+            if actor.effect:
                 mixed = add_composite(bg, sprite)
             else:
                 mixed = Image.alpha_composite(bg, sprite)
@@ -160,25 +171,24 @@ if __name__ == "__main__":
         if not os.path.isfile(path):
             print "No such file: " + path
             exit()
-    
-    board = parse_tile(level_path)
+
+    level = load_level(level_path)
     tiles = tile_segments(tiles_path)
-    out_img = generate_map(board, tiles)
+    out_img = generate_map(level.board, tiles)
     layers = {
         "normal" : [],
         "light" : [],
     }
-    for npc in parse_npcs(level_path):
-        if npc["layer"] < 2:
-            layers["normal"].append(npc)
+    for actor in level.actors:
+        if actor.layer < 2:
+            layers["normal"].append(actor)
         else:
-            layers["light"].append(npc)
+            layers["light"].append(actor)
     
     add_actors(out_img, layers["normal"])
-    effects = parse_area_effect(level_path)
-    if len(effects) == 1:
-        apply_area_effect(out_img, effects[0])
-    elif len(effects) > 1:
+    if len(level.effects) == 1:
+        apply_area_effect(out_img, level.effects[0])
+    elif len(level.effects) > 1:
         print "multiple area lighting effects detected"
     
     # TODO apply area lighting here

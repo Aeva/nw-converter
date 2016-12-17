@@ -20,17 +20,14 @@ import sys
 import math
 import struct
 
+from common import LevelParser
 
-class DotGraalParser(object):
+
+class DotGraalParser(LevelParser):
     """
     This class takes a path to a .graal encoded file, decodes it, and
     provides a means of easily accessing the contained data.
     """
-    def __init__(self, path):
-        self._uri = path
-        self.version = None
-
-        self.parse()
 
     def parse(self):
         raw = open(self._uri, "r").read()

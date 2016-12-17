@@ -20,276 +20,89 @@ import sys
 import string
 from PIL import Image
 
+from common import LevelParser, Actor
+
+
 BASE64 = string.ascii_uppercase + string.ascii_lowercase + string.digits + "+/"
-TILE_SIZE = 16
 
 
-def decode_tile(aa):
+
+class DotNWParser(LevelParser):
     """
-    This method is called by parse_tile, and does not need to be called
-    directly.  This function takes a pair of characters 'XX' which
-    represents a number in base64, and determines the x,y coordinate
-    encoded in that number.
-
-    The return value is a dictionary that describes the tile.
+    This class takes a path to a .graal encoded file, decodes it, and
+    provides a means of easily accessing the contained data.
     """
-    lhs = BASE64.index(aa[0])*64
-    rhs = BASE64.index(aa[1])
-    di = lhs + rhs
-    tx = di % 16
-    ty = di / 16
-    bx = ty / 32 * 16 + tx
-    by = ty % 32 
-    tile = {
-        "code" : aa,
-        "index" : di,
-        "__t_xy" : (tx, ty),
-        "sprite" : (bx, by),
-    }
-    return tile
 
+    def parse(self):
+        with open(self._uri, "r") as reader:
+            self.version = reader.read(8)
+            reader.seek(0)
+            lines = reader.readlines()
+        assert self.version == "GLEVNW01"
 
-def parse_tile(path):
-    """
-    Takes a path to a .nw file, and parses out the tile information.
-    The returned object should be useful for mapping from positions on
-    the board to the tile map for the board.
+        pattern = r'BOARD (\d+) (\d+) (\d+) (\d+) ([{0}]+)'.format(BASE64)
+        for line in lines:
+            match = re.match(pattern, line)
+            if match:
+                x_start, y_start, run, layer, data = match.groups()
+                y = int(y_start)
+                for i in range(int(run)*2)[::2]:
+                    x = i/2
+                    encoded = data[i:i+2]
+                    self.board[x][y] = self.decode_tile(encoded)
 
-    The returned object is a two-dimensional array, such that you can
-    read from it like so:
+        self.find_npcs(lines)
 
-    > level_tiles = parse_tile("some_level.nw")
-    > sprite_xy = level_tiles[x][y]["sprite"]
-
-    In the above example, "sprite_xy" will be the coordinates of the
-    sprite for the tile in pics1.png.
-    """
-    lines = open(path, "r").readlines()
-    board = [[None for y in range (64)] for x in range(64)]
-    pattern = r'BOARD (\d+) (\d+) (\d+) (\d+) ([{0}]+)'.format(BASE64)
-
-    for line in lines:
-        match = re.match(pattern, line)
-        if match:
-            x_start, y_start, run, layer, data = match.groups()
-            y = int(y_start)
-            for i in range(int(run)*2)[::2]:
-                x = i/2
-                encoded = data[i:i+2]
-                tile = decode_tile(encoded)
-                board[x][y] = tile
-    return board
-
-
-def img_search(img_name):
-    """
-    This method recursively searches the "sprites" directory for the
-    first image file that matches img_name, and returns its path.
-
-    This is used for looking up the sprite needed to draw NPCs.
-    """
-    name = ".".join(img_name.split(".")[:-1])
-    extensions = ["png", "gif"]
-    tree = os.walk('sprites', True, None, True)
-    for root, dirnames, filenames in tree:
-        for filename in filenames:
-            for ext in extensions:
-                if filename == name + "." + ext:
-                    return os.path.join(root, filename)
-    return None
-
-
-def parse_area_effect(path):
-    """
-    This function takes a path name for a .nw file, and returns a list
-    of color filters that might be applied to the level by NPC
-    scripts.
-    """
-    leveldata = open(path, "r").read()
-    pattern = r'seteffect ?([\d/*.+-]+) ?, ?([\d/*.+-]+)?, ?([\d/*.+-]+)?, ?([\d/*.+-]+);'
-
-    effects = []
-    found = re.findall(pattern, leveldata)
-    if found:
-        try:
-            effects.append(map(lambda x: float(eval(x)) if len(x) > 0 else 0.0, found[0]))
-        except Exception as error:
-            print "error parsing:", found[0]
-            print error
-    return effects
-            
-
-def parse_npcs(path):
-    """
-    This function takes a path name for a .nw file, and attempts to
-    parse data about the NPCs stored within.
-
-    As this is intended more as an aid to printing out a static image,
-    some fuzzy grepping of the NPC scripts is done to determine things
-    like transparency effects, zoom effects, adjusted coordinates, and
-    possibly other things.
-
-    The result is a dict that describes how to draw the NPC.
-    """
-    leveldata = open(path, "r").read().replace('\r\n', '\n')
-    pattern = r'^NPC ([^\s]+) (\d+) (\d+)$(.+?)NPCEND$'
-    offset_x_patterns = [
-        r'^ *x ?(=) ?((?:x? ?[\d/*+\-. ]+)|(?:[\d/*+\-. ]+ ?x?)) ?;',
-        r'^ *x ?(\+=|\-=) ?([\d/*+\-. ]+) ?;',
-        ]
-    offset_y_patterns = []
-    for regex in offset_x_patterns:
-        offset_y_patterns.append(regex.replace('x', 'y'))
     
-    flags = re.DOTALL | re.MULTILINE
-    npcs = re.findall(pattern, leveldata, flags)
-    structs = []
-    for npc in npcs:
-        actor = {
-            "img" : None,
-            "x" : int(npc[1]),
-            "y" : int(npc[2]),
-            "area" : [0, 0, 0, 0], # cropx cropy width height
-            "zoom" : None, # or, newx, newy, newwidth, newheight, scale_factor
-            "src" : npc[3].strip() or '',
-            "effect" : None,
-            "layer" : 0,
-        }
+    def decode_tile(self, aa):
+        """
+        This method is called by parse_tile, and does not need to be
+        called directly.  This function takes a pair of characters
+        'XX' which represents a number in base64, and determines the
+        x,y coordinate encoded in that number.
 
-        def do_move(axis, actor, match):
-            operator, value = match.groups()
-            value = float(eval(value.replace(axis, str(actor[axis]))))
-            if (operator == "="):
-                actor[axis] = value
-            elif (operator == "+="):
-                actor[axis] += value
-            elif (operator == "-="):
-                actor[axis] -= value
-            else:
-                print "unknown position operator:", operator
+        The return value is a dictionary that describes the tile.
+        """
+        lhs = BASE64.index(aa[0])*64
+        rhs = BASE64.index(aa[1])
+        di = lhs + rhs
+        tx = di % 16
+        ty = di / 16
+        bx = ty / 32 * 16 + tx
+        by = ty % 32 
+        # tile = {
+        #     "code" : aa,
+        #     "index" : di,
+        #     "__t_xy" : (tx, ty),
+        #     "sprite" : (bx, by),
+        # }
+        return (bx, by)
 
-        moved = False
-        for regex in offset_x_patterns:
-            found = re.search(regex, actor["src"], flags)
-            if found:
-                do_move('x', actor, found)
-                moved = True
-                break
-            
-        for regex in offset_y_patterns:
-            found = re.search(regex, actor["src"], flags)
-            if found:
-                do_move('y', actor, found)
-                moved = True
-                break
-        if moved:
-            old_xy = "({0}, {1})".format(*npc[1:3])
-            new_xy = "({0}, {1})".format(actor['x'], actor['y'])
-            print " - moved", npc[0], "from", old_xy, "to", new_xy
-            
-        img_path = None
-        if actor["src"].count("setimgpart"):
-            pattern = r'setimgpart ([^\s]+?) ?, ?([\d/*+-]+) ??, ?([\d/*+-]+) ??, ?([\d/*+-]+) ??, ?([\d/*+-]+) ?;'
-            found = re.findall(pattern, actor["src"])
-            if found:
-                img_path = img_search(found[0][0])
-                actor["area"] = map(lambda x: eval(x), found[0][1:])
-            
-        if img_path is None and npc[0] != "-":
-            img_path = img_search(npc[0])
-            if img_path:
-                img = Image.open(img_path)
-                actor["area"][2] = img.size[0]
-                actor["area"][3] = img.size[1]
-
-        if actor["src"].count("drawaslight;"):
-            actor["layer"] = 2
-
-        elif actor["src"].count("drawunderplayer;"):
-            actor["layer"] = -1
-
-        elif actor["src"].count("drawoverplayer;"):
-            actor["layer"] = 1
-        
-        if actor["src"].count("setcoloreffect"):
-            pattern = r'setcoloreffect ?([\d/*.+-]+) ?, ?([\d/*.+-]+)?, ?([\d/*.+-]+)?, ?([\d/*.+-]+);'
-            found = re.findall(pattern, actor["src"])
-            if found:
-                try:
-                    actor["effect"] = map(lambda x: eval(x) if len(x) > 0 else 0.0, found[0])
-                except:
-                    print "error parsing:", found[0]
-                    img_path = None
-
-        if actor["src"].count("setzoomeffect"):
-            pattern = r'setzoomeffect ?([\d/*.+-]+) ?;'
-            found = re.findall(pattern, actor["src"])
-            if found:
-                zoom = float(eval(found[0]))
-                old_width = actor["area"][2]
-                new_width = int(old_width * zoom)
-                old_height = actor["area"][3]
-                new_height = int(old_height * zoom)
-                old_x = actor["x"]
-                new_x = old_x + (((new_width - old_width) / 2.0) * -1) / TILE_SIZE
-                old_y = actor["y"]
-                new_y = old_y + (((new_height - old_height) / 2.0) * -1) / TILE_SIZE
-                actor["zoom"] = [new_x, new_y, new_width, new_height, zoom]
-
-        if actor["src"].count("join flickerlights;"):
-            # 2k1-specific hack.  possibly should just hide images
-            # with the word "light" in them if they don't call set
-            # effect, but only on levels where at least one npc uses
-            # seteffect.
-            img_path = None
-
-        actor["img"] = img_path;
-        structs.append(actor)
-
-    def sort_fn(lhs, rhs):
-        if lhs["layer"] < rhs["layer"]:
-            return -1
-        elif lhs["layer"] > rhs["layer"]:
-            return 1
-
-        lhs_height = lhs["zoom"][3] if lhs["zoom"] else lhs["area"][3]
-        lhs_x = lhs["zoom"][0] if lhs["zoom"] else lhs["x"]
-        lhs_y = lhs["zoom"][1] if lhs["zoom"] else lhs["y"]
-
-        rhs_height = rhs["zoom"][3] if rhs["zoom"] else rhs["area"][3]
-        rhs_x = rhs["zoom"][0] if rhs["zoom"] else rhs["x"]
-        rhs_y = rhs["zoom"][1] if rhs["zoom"] else rhs["y"]
-
-        a = lhs_y + (lhs_height / TILE_SIZE)
-        b = rhs_y + (rhs_height / TILE_SIZE)
-            
-        if a < b:
-            return -1
-        elif a > b:
-            return 1
-        elif lhs_x < rhs_x:
-            return -1
-        elif lhs_x > rhs_x:
-            return 1
-        else:
-            return 0
-            
-    structs.sort(sort_fn)
-    return structs
     
-    
+    def find_npcs(self, lines):
+        level_data = "\n".join(lines)
+        pattern = r'^NPC ([^\s]+) (\d+) (\d+)$(.+?)NPCEND$'
+        flags = re.DOTALL | re.MULTILINE
+        npcs = re.findall(pattern, level_data, flags)
+        for npc in npcs:
+            x, y = int(npc[1]), int(npc[2])
+            img = npc[0] if npc[0] != '-' else None
+            src = npc[3].strip()
+            self.actors.append(Actor(img, x, y, src))
+
+
 if __name__ == "__main__":
     path = sys.argv[1]
-    board = parse_tile(path)
+    level = DotNWParser(path)
     for x in range(64):
         row = ""
         for y in range(64):
-            tile = board[x][y]
+            tile = level.board[x][y]
             assert tile is not None
             row += tile["code"]
         print row
-    npcs = parse_npcs(path)
-    for npc in npcs:
+
+    for actor in level.actors:
         print "--------------------------------"
-        print npc["img"]
-        print npc["src"]
+        print actor.img
+        print actor.src
