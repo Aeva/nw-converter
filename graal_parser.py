@@ -100,6 +100,17 @@ class DotGraalParser(LevelParser):
         test = raw[after_tiles:]
         assert len(tiles) == stop_at
 
+        for di in range(len(tiles)):
+            tile = tiles[di]
+            y = int(math.floor(di/64.0))
+            x = di%64
+            # the following is wrong, but sorta works:
+            tx = di % 16
+            ty = di / 16
+            bx = ty / 32 * 16 + tx
+            by = ty % 32 
+            self.board[x][y] = (bx, by)
+
         
 if __name__ == "__main__":
     path = sys.argv[1]
