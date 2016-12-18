@@ -37,7 +37,8 @@ class DotNWParser(LevelParser):
         with open(self._uri, "r") as reader:
             self.version = reader.read(8)
             reader.seek(0)
-            lines = reader.readlines()
+            raw_data = reader.read().replace("\r\n", "\n")
+            lines = raw_data.split("\n")
         assert self.version == "GLEVNW01"
 
         pattern = r'BOARD (\d+) (\d+) (\d+) (\d+) ([{0}]+)'.format(BASE64)
@@ -50,8 +51,7 @@ class DotNWParser(LevelParser):
                     x = i/2
                     encoded = data[i:i+2]
                     self.board[x][y] = self.decode_tile(encoded)
-
-        self.find_npcs(lines)
+        self.find_npcs(raw_data)
 
     
     def decode_tile(self, aa):
@@ -79,11 +79,10 @@ class DotNWParser(LevelParser):
         return (bx, by)
 
     
-    def find_npcs(self, lines):
-        level_data = "\n".join(lines)
+    def find_npcs(self, raw_data):
         pattern = r'^NPC ([^\s]+) (\d+) (\d+)$(.+?)NPCEND$'
         flags = re.DOTALL | re.MULTILINE
-        npcs = re.findall(pattern, level_data, flags)
+        npcs = re.findall(pattern, raw_data, flags)
         for npc in npcs:
             x, y = int(npc[1]), int(npc[2])
             img = npc[0] if npc[0] != '-' else None

@@ -51,8 +51,8 @@ class Actor(object):
     def __init__(self, image, x, y, src):
         self.src = src
         self.image = None
-        self.x = 0
-        self.y = 0
+        self.x = x
+        self.y = y
         self.clip = [0, 0, 0, 0] # [cropx, cropy, width, height]
         self.zoom = None # or, [newx, newy, newwidth, newheight, scale_factor]
         self.effect = None
@@ -62,7 +62,7 @@ class Actor(object):
             img_path = img_search(image)
             if img_path:
                 img = Image.open(img_path)
-                self.src = img_path
+                self.image = img_path
                 self.clip = [0, 0, img.size[0], img.size[1]]
         self.munge()
 
