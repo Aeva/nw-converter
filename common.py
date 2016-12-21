@@ -67,7 +67,7 @@ class Actor(object):
         self.munge()
 
 
-    def __move(axis, match):
+    def __move(self, axis, match):
         """
         Move the actor.
         """
@@ -103,7 +103,7 @@ class Actor(object):
             for refex in patterns:
                 found = re.search(regex, self.src, flags)
                 if found:
-                    do_move(axis, found)
+                    self.__move(axis, found)
                 moved = True
                 break
             
