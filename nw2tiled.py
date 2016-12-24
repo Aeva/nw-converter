@@ -65,6 +65,11 @@ def encode_as_tmx(level):
     tileset.attrib['firstgid'] = "1"
     tileset.attrib['source'] = "pics1.tsx"
 
+    ext_start = 32*128 + 1
+    npc_tileset = SubElement(root, 'tileset')
+    npc_tileset.attrib['firstgid'] = str(ext_start)
+    npc_tileset.attrib['name'] = "extra images"
+
     layer = SubElement(root, 'layer')
     layer.attrib['name'] = "map"
     layer.attrib['width'] = "64"
@@ -74,6 +79,34 @@ def encode_as_tmx(level):
     data.attrib['encoding'] = "csv"
     data.text = encode_as_csv(level)
 
+    scope = {
+        "images" : {},
+        "next_gid" : 0,
+        "ext_start" : ext_start,
+    }
+    def index_for_img(src):
+        if not scope['images'].has_key(src):
+            scope['images'][src] = scope['ext_start'] + scope['next_gid']
+            tile = SubElement(npc_tileset, 'tile')
+            tile.attrib['id'] = str(scope['next_gid'])
+            scope['next_gid'] += 1
+            img = SubElement(tile, 'image')
+            img.attrib['source'] = "../" + src
+        return scope['images'][src]
+
+    npc_layer = SubElement(root, 'objectgroup')
+    npc_layer.attrib['name'] = "npcs"
+    obj_id = 0
+    for actor in level.actors:
+        if not actor.image:
+            continue
+        obj_id += 1
+        obj = SubElement(npc_layer, 'object')
+        obj.attrib['id'] = str(obj_id)
+        obj.attrib['gid'] = str(index_for_img(actor.image))
+        obj.attrib['name'] = str(actor.image.split("/")[-1])
+        obj.attrib['x'] = str(actor.x*16)
+        obj.attrib['y'] = str(actor.y*16 + actor.clip[3])
     return root
 
 
