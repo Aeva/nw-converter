@@ -24,10 +24,10 @@ from graal_parser import DotGraalParser
 TILE_SIZE = 16
 
 
-def load_level(level_path):
+def load_level(level_path, sprites_path):
     for parser in [DotNWParser, DotGraalParser]:
         try:
-            return parser(level_path)
+            return parser(level_path, sprites_path)
         except AssertionError:
             continue
     raise Exception("Unable to determine level file format: %s" % level_path)
@@ -151,28 +151,9 @@ def add_actors(out_img, actors):
                 mixed = Image.alpha_composite(bg, sprite)
             out_img.paste(mixed, paste_box)
 
-            
-if __name__ == "__main__":
-    if len(sys.argv) == 1:
-        print "First argument must be a level file."
-        exit()
 
-    level_path = sys.argv[1]
-    tiles_path = os.path.join("sprites", "pics1.png")
-    if len(sys.argv) >= 3:
-        tiles_path = sys.argv[2]
-
-    level_name = os.path.split(level_path)[-1]
-    if len(sys.argv) >= 4:
-        level_name = sys.argv[3]
-    out_path = os.path.join("out", level_name + ".png")
-
-    for path in [level_path, tiles_path]:
-        if not os.path.isfile(path):
-            print "No such file: " + path
-            exit()
-
-    level = load_level(level_path)
+def convert_to_png(level_path, tiles_path, sprites_path, out_path):
+    level = load_level(level_path, sprites_path)
     tiles = tile_segments(tiles_path)
     out_img = generate_map(level.board, tiles)
     layers = {
@@ -194,3 +175,26 @@ if __name__ == "__main__":
     # TODO apply area lighting here
     add_actors(out_img, layers["light"])
     out_img.convert("RGB").save(out_path)
+
+            
+if __name__ == "__main__":
+    if len(sys.argv) == 1:
+        print "First argument must be a level file."
+        exit()
+
+    level_path = sys.argv[1]
+    tiles_path = os.path.join("sprites", "pics1.png")
+    if len(sys.argv) >= 3:
+        tiles_path = sys.argv[2]
+
+    level_name = os.path.split(level_path)[-1]
+    if len(sys.argv) >= 4:
+        level_name = sys.argv[3]
+    out_path = os.path.join("out", level_name + ".png")
+
+    for path in [level_path, tiles_path]:
+        if not os.path.isfile(path):
+            print "No such file: " + path
+            exit()
+
+    convert_to_png(level_path, tiles_path, "sprites", out_path)

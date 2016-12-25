@@ -110,6 +110,14 @@ def encode_as_tmx(level):
     return root
 
 
+def convert_to_tmx(level_path, tiles_path, sprites_path, out_path):
+    level = load_level(level_path)
+    tmx = encode_as_tmx(level)
+
+    with open(out_path, 'w') as output:
+        output.write(pretty_print(tmx))
+
+
 if __name__ == "__main__":
     if len(sys.argv) == 1:
         print "First argument must be a level file."
@@ -130,8 +138,4 @@ if __name__ == "__main__":
             print "No such file: " + path
             exit()
 
-    level = load_level(level_path)
-    tmx = encode_as_tmx(level)
-
-    with open(out_path, 'w') as output:
-        output.write(pretty_print(tmx))
+    convert_to_tmx(level_path, tiles_path, "sprites", out_path)

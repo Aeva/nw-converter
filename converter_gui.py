@@ -19,6 +19,8 @@ import os
 import re
 import gi
 from gi.repository import Gtk, GObject
+from nw2png import convert_to_png
+from nw2tiled import convert_to_tmx
 
 
 class ConverterWindow(object):
@@ -103,7 +105,29 @@ class ConverterWindow(object):
         self.levels_store.clear()
 
     def run_converter(self, *args, **kargs):
-        print "CONVERT"
+        tmx_button = self.builder.get_object("tmx_radio")
+        png_button = self.builder.get_object("png_radio")
+        converter = None
+        suffix = None
+        if tmx_button.get_active():
+            converter = convert_to_tmx
+            suffix = "tmx"
+        if png_button.get_active():
+            converter = convert_to_png
+            suffix = "png"
+
+        self.levels
+        tileset = self.builder.get_object("pics1_chooser").get_filename()
+        search = self.builder.get_object("search_path_chooser").get_filename()
+        out = self.builder.get_object("output_path_chooser").get_filename()
+
+        if not tileset or not search or not out:
+            return
+
+        for path, level in self.levels:
+            level_path = os.path.join(path, level)
+            out_path = os.path.join(out, level) + '.' + suffix
+            converter(level_path, tileset, search, out_path)
 
     def shutdown(self, *args, **kargs):
         Gtk.main_quit()

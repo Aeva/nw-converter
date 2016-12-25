@@ -21,6 +21,7 @@ from PIL import Image
 
 
 TILE_SIZE = 16
+SPRITES_PATH = "sprites"
 
 
 def img_search(img_name):
@@ -32,7 +33,7 @@ def img_search(img_name):
     """
     name = ".".join(img_name.split(".")[:-1])
     extensions = ["png", "gif"]
-    tree = os.walk('sprites', True, None, True)
+    tree = os.walk(SPRITES_PATH, True, None, True)
     for root, dirnames, filenames in tree:
         for filename in filenames:
             for ext in extensions:
@@ -161,7 +162,10 @@ class LevelParser(object):
     Baseclass for level parsers to derrive from.
     """
     
-    def __init__(self, path):
+    def __init__(self, path, sprites_path = None):
+        global SPRITES_PATH
+        if sprites_path:
+            SPRITES_PATH = sprites_path
         self._uri = path
         self.version = None
         self.board = [[None for y in range (64)] for x in range(64)]
