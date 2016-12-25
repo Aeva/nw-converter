@@ -57,14 +57,19 @@ class ConverterWindow(object):
     def refresh_levels_view(self):
         all_levels = list(self.levels)
         all_levels.sort()
+        all_paths = set([path for path, level in all_levels])
 
-        self.levels_store.clear()
-        path_iters = {}
-        for path, level in all_levels:
-            if not path_iters.has_key(path):
-                path_iters[path] = self.levels_store.append(None, [path])
-            self.levels_store.append(path_iters[path], [level])
-            print " - {0} : {1}".format(path, level)
+        if len(all_paths) == 1:
+            # don't bother with nesting
+            for path, level in all_levels:
+                self.levels_store.append(None, [level])
+        else:
+            self.levels_store.clear()
+            path_iters = {}
+            for path, level in all_levels:
+                if not path_iters.has_key(path):
+                    path_iters[path] = self.levels_store.append(None, [path])
+                self.levels_store.append(path_iters[path], [level])
 
     def add_level(self, path):
         extensions = r'.+\.(nw|graal|zelda)$'
