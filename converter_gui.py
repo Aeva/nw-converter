@@ -30,6 +30,11 @@ class ConverterWindow(object):
         self.levels = set()
         self.levels_store = self.builder.get_object("level_path_store")
         self.levels_view = self.builder.get_object("level_tree_view")
+
+        renderer = Gtk.CellRendererText()
+        renderer.set_property("ellipsize", 3)
+        title_column = Gtk.TreeViewColumn("Tab Title", renderer, text=0)
+        self.levels_view.append_column(title_column)
         
         self.window = self.builder.get_object("main_window")
         self.window.show_all()
@@ -52,8 +57,14 @@ class ConverterWindow(object):
     def refresh_levels_view(self):
         all_levels = list(self.levels)
         all_levels.sort()
-        for level in all_levels:
-            print " -", os.path.join(*level)
+
+        self.levels_store.clear()
+        path_iters = {}
+        for path, level in all_levels:
+            if not path_iters.has_key(path):
+                path_iters[path] = self.levels_store.append(None, [path])
+            self.levels_store.append(path_iters[path], [level])
+            print " - {0} : {1}".format(path, level)
 
     def add_level(self, path):
         extensions = r'.+\.(nw|graal|zelda)$'
@@ -83,7 +94,8 @@ class ConverterWindow(object):
         self.refresh_levels_view()
 
     def clear_levels(self, *args, **kargs):
-        print "CLEAR"
+        self.levels.clear()
+        self.levels_store.clear()
 
     def run_converter(self, *args, **kargs):
         print "CONVERT"
