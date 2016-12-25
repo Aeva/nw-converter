@@ -17,10 +17,20 @@
 
 import os
 import re
+from threading import Thread
 import gi
-from gi.repository import Gtk, GObject
+from gi.repository import GLib, Gtk, GObject
 from nw2png import convert_to_png
 from nw2tiled import convert_to_tmx
+
+
+def run_jobs(window, jobs):
+    processed = 0
+    for converter, args in jobs:
+        converter(*args)
+        processed += 1
+        GLib.idle_add(window.advance_progress, processed)
+    GLib.idle_add(window.conclude_progress)
 
 
 class ConverterWindow(object):
@@ -42,7 +52,9 @@ class ConverterWindow(object):
         self.window.show_all()
         self.about_popup = self.builder.get_object("about_popup")
         self.chooser_popup = self.builder.get_object("file_chooser_popup")
+        self.progress_popup = self.builder.get_object("progress_popup")
         self.setup_filters()
+        self.setup_working_dirs()
 
     def setup_filters(self):
         level_filter = Gtk.FileFilter()
@@ -55,6 +67,12 @@ class ConverterWindow(object):
         self.chooser_popup.add_filter(level_filter)
         pics_chooser = self.builder.get_object("pics1_chooser")
         pics_chooser.add_filter(img_filter)
+
+    def setup_working_dirs(self):
+        path = os.getcwd()
+        self.builder.get_object("pics1_chooser").set_current_folder(path)
+        self.builder.get_object("search_path_chooser").set_current_folder(path)
+        self.builder.get_object("output_path_chooser").set_current_folder(path)
 
     def refresh_levels_view(self):
         all_levels = list(self.levels)
@@ -86,7 +104,23 @@ class ConverterWindow(object):
             level = (os.path.abspath(path), head)
             self.levels.add(level)
 
+    def start_progress(self):
+        self.progress_popup.show_all()
+
+    def advance_progress(self, completed):
+        pass
+
+    def conclude_progress(self):
+        self.progress_popup.hide()
+        self.clear_levels()
+
     ### the methods below are signal handlers
+
+    def image_search_changed(self, *args, **kargs):
+        chooser = self.builder.get_object("pics1_chooser")
+        if not chooser.get_filename():
+            search = self.builder.get_object("search_path_chooser").get_filename()
+            chooser.set_current_folder(search)
         
     def show_about(self, *args, **kargs):
         self.about_popup.run()
@@ -124,10 +158,14 @@ class ConverterWindow(object):
         if not tileset or not search or not out:
             return
 
+        self.start_progress()
+        processed = 0
+        jobs = []
         for path, level in self.levels:
             level_path = os.path.join(path, level)
             out_path = os.path.join(out, level) + '.' + suffix
-            converter(level_path, tileset, search, out_path)
+            jobs.append((converter, (level_path, tileset, search, out_path)))
+        Thread(target=run_jobs, args=(self, jobs)).start()
 
     def shutdown(self, *args, **kargs):
         Gtk.main_quit()
