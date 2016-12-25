@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 
 #  Copyright (c) 2016, Aeva M. Palecek
 
@@ -17,22 +18,34 @@
 
 import os
 import re
+import time
 from threading import Thread
+from multiprocessing import Pool, cpu_count
 import gi
 from gi.repository import GLib, Gtk, GObject
 from nw2png import convert_to_png
 from nw2tiled import convert_to_tmx
 
 
-def run_jobs(window, jobs):
-    processed = 0
-    for converter, level_name, args in jobs:
-        GLib.idle_add(window.advance_progress, level_name, processed)
-        converter(*args)
-        processed += 1
-    GLib.idle_add(window.conclude_progress)
+def run_jobs(window, converter, jobs):
+    scope = {
+        "processed" : 0
+    }
 
+    def job_callback(result):
+        scope["processed"] += 1
+        GLib.idle_add(window.advance_progress, scope["processed"])
 
+    start = time.time()
+    pool = Pool(max(cpu_count(), 2))
+    for job in jobs:
+        pool.apply_async(converter, job, callback=job_callback)
+
+    pool.close()
+    pool.join()
+    GLib.idle_add(window.conclude_progress, time.time()-start)
+
+    
 class ConverterWindow(object):
     def __init__(self):
         self.builder = Gtk.Builder()
@@ -109,18 +122,26 @@ class ConverterWindow(object):
     def start_progress(self):
         self.progress_popup.show_all()
         self.progress_bar.set_fraction(0.0)
-        self.progress_label.set_text('')
+        self.progress_label.set_text(
+            'Converting levels... (0/{0})'.format(
+                len(self.levels)))
 
-    def advance_progress(self, level_name, completed):
+    def advance_progress(self, completed):
+        if completed > len(self.levels):
+            return
         self.progress_bar.set_fraction(completed / float(len(self.levels)))
         self.progress_label.set_text(
-            "Converting {0}... ({1}/{2})".format(
-                level_name,
+            "Converting levels... ({0}/{1})".format(
                 completed+1,
                 len(self.levels)))
 
-    def conclude_progress(self):
+    def conclude_progress(self, elapsed_time):
         self.progress_popup.hide()
+
+        print "{0} files converted in {1} seconds.".format(
+            len(self.levels), elapsed_time)
+            
+        
         self.clear_levels()
 
     ### the methods below are signal handlers
@@ -173,8 +194,8 @@ class ConverterWindow(object):
         for path, level in self.levels:
             level_path = os.path.join(path, level)
             out_path = os.path.join(out, level) + '.' + suffix
-            jobs.append((converter, level, (level_path, tileset, search, out_path)))
-        Thread(target=run_jobs, args=(self, jobs)).start()
+            jobs.append((level_path, tileset, search, out_path))
+        Thread(target=run_jobs, args=(self, converter, jobs)).start()
 
     def shutdown(self, *args, **kargs):
         Gtk.main_quit()
