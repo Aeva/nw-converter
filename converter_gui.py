@@ -26,10 +26,10 @@ from nw2tiled import convert_to_tmx
 
 def run_jobs(window, jobs):
     processed = 0
-    for converter, args in jobs:
+    for converter, level_name, args in jobs:
+        GLib.idle_add(window.advance_progress, level_name, processed)
         converter(*args)
         processed += 1
-        GLib.idle_add(window.advance_progress, processed)
     GLib.idle_add(window.conclude_progress)
 
 
@@ -53,6 +53,8 @@ class ConverterWindow(object):
         self.about_popup = self.builder.get_object("about_popup")
         self.chooser_popup = self.builder.get_object("file_chooser_popup")
         self.progress_popup = self.builder.get_object("progress_popup")
+        self.progress_label = self.builder.get_object("progress_label")
+        self.progress_bar = self.builder.get_object("progressbar")
         self.setup_filters()
         self.setup_working_dirs()
 
@@ -106,9 +108,16 @@ class ConverterWindow(object):
 
     def start_progress(self):
         self.progress_popup.show_all()
+        self.progress_bar.set_fraction(0.0)
+        self.progress_label.set_text('')
 
-    def advance_progress(self, completed):
-        pass
+    def advance_progress(self, level_name, completed):
+        self.progress_bar.set_fraction(completed / float(len(self.levels)))
+        self.progress_label.set_text(
+            "Converting {0}... ({1}/{2})".format(
+                level_name,
+                completed+1,
+                len(self.levels)))
 
     def conclude_progress(self):
         self.progress_popup.hide()
@@ -164,7 +173,7 @@ class ConverterWindow(object):
         for path, level in self.levels:
             level_path = os.path.join(path, level)
             out_path = os.path.join(out, level) + '.' + suffix
-            jobs.append((converter, (level_path, tileset, search, out_path)))
+            jobs.append((converter, level, (level_path, tileset, search, out_path)))
         Thread(target=run_jobs, args=(self, jobs)).start()
 
     def shutdown(self, *args, **kargs):
