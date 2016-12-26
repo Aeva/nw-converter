@@ -432,9 +432,23 @@
     <property name="skip_pager_hint">True</property>
     <property name="transient_for">main_window</property>
     <property name="program_name">nw-converter</property>
+    <property name="version">Version 0</property>
     <property name="copyright" translatable="yes">Copyright 2016 Aeva Pelecek</property>
     <property name="website">https://github.com/Aeva/nw-converter</property>
-    <property name="license" translatable="yes">GPL v3.0 or later</property>
+    <property name="website_label" translatable="yes">Project Website</property>
+    <property name="license" translatable="yes">This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or (at
+your option) any later version.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+</property>
     <child internal-child="vbox">
       <object class="GtkVBox" id="dialog-vbox3">
         <property name="visible">True</property>
@@ -473,6 +487,7 @@
         <property name="can_focus">False</property>
         <child>
           <object class="GtkImage" id="image1">
+            <property name="width_request">256</property>
             <property name="height_request">128</property>
             <property name="visible">True</property>
             <property name="can_focus">False</property>
