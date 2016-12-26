@@ -108,7 +108,8 @@ class ConverterWindow(object):
                 self.levels_store.append(path_iters[path], [level])
 
     def add_level(self, path):
-        extensions = r'.+\.(nw|graal|zelda)$'
+        #extensions = r'.+\.(nw|graal|zelda)$'
+        extensions = r'.+\.(nw)$'
         if os.path.isdir(path):
             for base_dir, dirs, files in os.walk(path):
                 for file_ in files:
