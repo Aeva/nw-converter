@@ -94,12 +94,13 @@ class ConverterWindow(object):
         all_levels.sort()
         all_paths = set([path for path, level in all_levels])
 
+        self.levels_store.clear()
+
         if len(all_paths) == 1:
             # don't bother with nesting
             for path, level in all_levels:
                 self.levels_store.append(None, [level])
         else:
-            self.levels_store.clear()
             path_iters = {}
             for path, level in all_levels:
                 if not path_iters.has_key(path):
