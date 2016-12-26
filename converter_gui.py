@@ -138,9 +138,15 @@ class ConverterWindow(object):
     def conclude_progress(self, elapsed_time):
         self.progress_popup.hide()
 
-        print "{0} files converted in {1} seconds.".format(
-            len(self.levels), elapsed_time)
-            
+        message = "All done!\nConverted {0} files in {1} seconds.".format(
+            len(self.levels), round(elapsed_time, 2))
+
+        pop = Gtk.MessageDialog(
+            self.window,
+            0, Gtk.MessageType.INFO,
+            Gtk.ButtonsType.CLOSE, message)
+        pop.run()
+        pop.destroy()
         
         self.clear_levels()
 
