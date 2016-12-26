@@ -120,6 +120,7 @@ class ConverterWindow(object):
             self.levels.add(level)
 
     def start_progress(self):
+        self.window.set_sensitive(False)
         self.progress_popup.show_all()
         self.progress_bar.set_fraction(0.0)
         self.progress_label.set_text(
@@ -147,7 +148,8 @@ class ConverterWindow(object):
             Gtk.ButtonsType.CLOSE, message)
         pop.run()
         pop.destroy()
-        
+
+        self.window.set_sensitive(True)
         self.clear_levels()
 
     ### the methods below are signal handlers
