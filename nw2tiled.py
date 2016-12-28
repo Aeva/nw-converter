@@ -203,7 +203,7 @@ def encode_as_tmx(level, tileset_path):
         })
         props = SubElement(obj, 'properties')
         text = SubElement(props, 'property')
-        set_attrs(target, {
+        set_attrs(text, {
             "name" : "sign text",
             "type" : "string",
             "value" : sign.text,
