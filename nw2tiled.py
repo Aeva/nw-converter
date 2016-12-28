@@ -20,6 +20,8 @@ from xml.etree.ElementTree import Element, SubElement, tostring
 from xml.etree import ElementTree
 from xml.dom import minidom
 
+from PIL import Image
+
 from common import setup_paths, relative_img_path
 from nw_parser import DotNWParser
 from graal_parser import DotGraalParser
@@ -58,6 +60,8 @@ def set_attrs(element, attrs={}):
 
 
 def create_tileset(pics1_path):
+    pics_img = Image.open(pics1_path)
+    
     root = Element('tileset')
     set_attrs(root, {
         "name" : os.path.split(pics1_path)[1],
@@ -70,8 +74,8 @@ def create_tileset(pics1_path):
     image = SubElement(root, 'image')
     set_attrs(image, {
         "source" : os.path.split(pics1_path)[1],
-        "width" : 2048,
-        "height" : 512,
+        "width" : pics_img.size[0],
+        "height" : pics_img.size[1],
     })
 
     return root
@@ -155,16 +159,16 @@ def convert_to_tmx(level_path, tiles_path, sprites_path, out_path):
     tiles_name = os.path.split(tiles_path)[1] + ".tsx"
     output_dir = os.path.split(out_path)[0]
     relative_to_output = os.path.relpath(tiles_dir, output_dir)
-    
     tileset_path = os.path.join(relative_to_output, tiles_name)
-    tileset = create_tileset(tiles_path)
-    
+    tileset_output_path = os.path.abspath(os.path.join(output_dir, tileset_path))
+
+    if not os.path.isfile(tileset_output_path):
+        tileset = create_tileset(tiles_path)
+        with open(tileset_output_path, 'w') as output:
+            output.write(pretty_print(tileset))
+
     level = load_level(level_path)
     tmx = encode_as_tmx(level, tileset_path)
-
-    tileset_output_path = os.path.abspath(os.path.join(output_dir, tileset_path))
-    with open(tileset_output_path, 'w') as output:
-        output.write(pretty_print(tileset))
 
     with open(out_path, 'w') as output:
         output.write(pretty_print(tmx))
