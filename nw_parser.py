@@ -20,7 +20,7 @@ import sys
 import string
 from PIL import Image
 
-from common import LevelParser, Actor
+from common import LevelParser, Actor, Sign, Link
 
 
 BASE64 = string.ascii_uppercase + string.ascii_lowercase + string.digits + "+/"
@@ -52,6 +52,8 @@ class DotNWParser(LevelParser):
                     encoded = data[i:i+2]
                     self.board[x][y] = self.decode_tile(encoded)
         self.find_npcs(raw_data)
+        self.find_links(raw_data)
+        self.find_signs(raw_data)
 
     
     def decode_tile(self, aa):
@@ -88,6 +90,30 @@ class DotNWParser(LevelParser):
             img = npc[0] if npc[0] != '-' else None
             src = npc[3].strip()
             self.actors.append(Actor(img, x, y, src))
+
+
+    def find_links(self, raw_data):
+        pattern = r'^LINK ([^\s]+) (\d+) (\d+) (\d+) (\d+) ([^\s]+) ([^\s]+)$'
+        flags = re.DOTALL | re.MULTILINE
+        links = re.findall(pattern, raw_data, flags)
+        for link in links:
+            target = link[0]
+            x, y, w, h = map(int, link[1:5])
+            dest_x = link[5]
+            dest_y = link[6]
+            self.links.append(Link(target, x, y, w, h, dest_x, dest_y))
+
+
+    def find_signs(self, raw_data):
+        pattern = r'^SIGN (\d+) (\d+)$(.+?)SIGNEND$'
+        flags = re.DOTALL | re.MULTILINE
+        signs = re.findall(pattern, raw_data, flags)
+        for sign in signs:
+            x, y = int(sign[0]), int(sign[1])
+            text = sign[2]
+            self.signs.append(Sign(x, y, text))
+
+
 
 
 if __name__ == "__main__":
