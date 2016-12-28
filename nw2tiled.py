@@ -51,30 +51,65 @@ def encode_as_csv(level):
     return ",".join(data)
 
 
-def encode_as_tmx(level):
+def set_attrs(element, attrs={}):
+    for key, value in attrs.items():
+        element.attrib[key] = str(value)
+    return element
+
+
+def create_tileset(pics1_path):
+    root = Element('tileset')
+    set_attrs(root, {
+        "name" : os.path.split(pics1_path)[1],
+        "tilewidth" : 16,
+        "tileheight" : 16,
+        "tilecount" : 4096,
+        "columns" : 128,
+    })
+    
+    image = SubElement(root, 'image')
+    set_attrs(image, {
+        "source" : os.path.split(pics1_path)[1],
+        "width" : 2048,
+        "height" : 512,
+    })
+
+    return root
+
+
+def encode_as_tmx(level, tileset_path):
     root = Element('map')
-    root.attrib['version'] = "1.0"
-    root.attrib['orientation'] = "orthogonal"
-    root.attrib['renderorder'] = "right-down"
-    root.attrib['width'] = "64"
-    root.attrib['height'] = "64"
-    root.attrib['tilewidth'] = "16"
-    root.attrib['tileheight'] = "16"
-    root.attrib['nextobjectid'] = "1"
+    set_attrs(root, {
+        "version" : "1.0",
+        "orientation" : "orthogonal",
+        "renderorder" : "right-down",
+        "width" : 64,
+        "height" : 64,
+        "tilewidth" : 16,
+        "tileheight" : 16,
+        "nextobjectid" : 1
+    })
 
     tileset = SubElement(root, 'tileset')
-    tileset.attrib['firstgid'] = "1"
-    tileset.attrib['source'] = "pics1.tsx"
+    set_attrs(tileset, {
+        "firstgid" : 1,
+        "source" : tileset_path,
+    })
 
     ext_start = 32*128 + 1
+
     npc_tileset = SubElement(root, 'tileset')
-    npc_tileset.attrib['firstgid'] = str(ext_start)
-    npc_tileset.attrib['name'] = "extra images"
+    set_attrs(npc_tileset, {
+        "firstgid" : ext_start,
+        "name" : "extra images",
+    })
 
     layer = SubElement(root, 'layer')
-    layer.attrib['name'] = "map"
-    layer.attrib['width'] = "64"
-    layer.attrib['height'] = "64"
+    set_attrs(layer, {
+        "name" : "map",
+        "width" : 64,
+        "height" : 64,
+    })
 
     data = SubElement(layer, 'data')
     data.attrib['encoding'] = "csv"
@@ -103,18 +138,33 @@ def encode_as_tmx(level):
             continue
         obj_id += 1
         obj = SubElement(npc_layer, 'object')
-        obj.attrib['id'] = str(obj_id)
-        obj.attrib['gid'] = str(index_for_img(actor.image))
-        obj.attrib['name'] = str(actor.image.split("/")[-1])
-        obj.attrib['x'] = str(actor.x*16)
-        obj.attrib['y'] = str(actor.y*16 + actor.clip[3])
+        set_attrs(obj, {
+            "id" : obj_id,
+            "gid" : index_for_img(actor.image),
+            "name" : actor.image.split("/")[-1],
+            "x" : actor.x*16,
+            "y" : actor.y*16 + actor.clip[3],
+        })
     return root
 
 
 def convert_to_tmx(level_path, tiles_path, sprites_path, out_path):
     setup_paths(sprites_path, out_path)
+
+    tiles_dir = os.path.split(tiles_path)[0]
+    tiles_name = os.path.split(tiles_path)[1] + ".tsx"
+    output_dir = os.path.split(out_path)[0]
+    relative_to_output = os.path.relpath(tiles_dir, output_dir)
+    
+    tileset_path = os.path.join(relative_to_output, tiles_name)
+    tileset = create_tileset(tiles_path)
+    
     level = load_level(level_path)
-    tmx = encode_as_tmx(level)
+    tmx = encode_as_tmx(level, tileset_path)
+
+    tileset_output_path = os.path.abspath(os.path.join(output_dir, tileset_path))
+    with open(tileset_output_path, 'w') as output:
+        output.write(pretty_print(tileset))
 
     with open(out_path, 'w') as output:
         output.write(pretty_print(tmx))
