@@ -108,14 +108,14 @@ def encode_as_tmx(level, tileset_path):
         "name" : "extra images",
     })
 
-    layer = SubElement(root, 'layer')
-    set_attrs(layer, {
+    map_layer = SubElement(root, 'layer')
+    set_attrs(map_layer, {
         "name" : "map",
         "width" : 64,
         "height" : 64,
     })
 
-    data = SubElement(layer, 'data')
+    data = SubElement(map_layer, 'data')
     data.attrib['encoding'] = "csv"
     data.text = encode_as_csv(level)
 
@@ -149,6 +149,66 @@ def encode_as_tmx(level, tileset_path):
             "x" : actor.x*16,
             "y" : actor.y*16 + actor.clip[3],
         })
+
+    link_layer = SubElement(root, 'objectgroup')
+    link_layer.attrib['name'] = "level links"
+    link_layer.attrib['color'] = "#ffff00"
+    for link in level.links:
+        obj_id += 1
+        obj = SubElement(link_layer, 'object')
+        set_attrs(obj, {
+            "id" : obj_id,
+            "name" : link.target,
+            "type" : "link",
+            "x" : link.area[0] * 16,
+            "y" : link.area[1] * 16,
+            "width" : link.area[2] * 16,
+            "height" : link.area[3] * 16,
+        })
+
+        props = SubElement(obj, 'properties')
+        target = SubElement(props, 'property')
+        set_attrs(target, {
+            "name" : "warp target",
+            "type" : "string",
+            "value" : link.target,
+        })
+        dest_x = SubElement(props, 'property')
+        set_attrs(dest_x, {
+            "name" : "destination x",
+            "type" : "string",
+            "value" : link.dest[0],
+        })
+        dest_y = SubElement(props, 'property')
+        set_attrs(dest_y, {
+            "name" : "destination y",
+            "type" : "string",
+            "value" : link.dest[1],
+        })
+
+    sign_layer = SubElement(root, 'objectgroup')
+    sign_layer.attrib['name'] = "signs"
+    sign_layer.attrib['color'] = "#ff0000"
+    for sign in level.signs:
+        obj_id += 1
+        obj = SubElement(sign_layer, 'object')
+        set_attrs(obj, {
+            "id" : obj_id,
+            "name" : "sign",
+            "type" : "sign",
+            "x" : sign.area[0] * 16,
+            "y" : sign.area[1] * 16,
+            "width" : sign.area[2] * 16,
+            "height" : sign.area[3] * 16,
+        })
+        props = SubElement(obj, 'properties')
+        text = SubElement(props, 'property')
+        set_attrs(target, {
+            "name" : "sign text",
+            "type" : "string",
+            "value" : sign.text,
+        })
+        
     return root
 
 
