@@ -177,6 +177,23 @@ class Actor(object):
 
 
 
+class Sign(object):
+    def __init__(self, x, y, text):
+        self.text = text
+        self.area = (x, y, 2, 1) 
+
+
+
+
+class Link(object):
+    def __init__(self, target, x, y, w, h, new_x, new_y):
+        self.target = target
+        self.area = (x, y, w, h)
+        self.dest = (new_x, new_y)
+
+
+
+
 class LevelParser(object):
     """
     Baseclass for level parsers to derrive from.
