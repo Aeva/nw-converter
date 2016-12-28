@@ -22,6 +22,26 @@ from PIL import Image
 
 TILE_SIZE = 16
 SPRITES_PATH = "sprites"
+SPRITES_RELATIVE = SPRITES_PATH
+OUTPUT_PATH = os.path.abspath('.')
+
+
+def setup_paths(sprites_path, output_path):
+    global SPRITES_RELATIVE
+    global SPRITES_PATH
+    global OUTPUT_PATH
+    OUTPUT_PATH = os.path.abspath(output_path) # path to output file
+    SPRITES_PATH = os.path.abspath(sprites_path)
+    output_dir = os.path.split(OUTPUT_PATH)[0] # directory of output file
+    assert os.path.isdir(SPRITES_PATH)
+    assert os.path.isdir(output_dir)
+    SPRITES_RELATIVE = os.path.relpath(SPRITES_PATH, output_dir)
+
+
+def relative_img_path(long_path):
+    assert os.path.isfile(long_path)
+    return os.path.join(
+        SPRITES_RELATIVE, os.path.relpath(long_path, SPRITES_PATH))
 
 
 def img_search(img_name):
@@ -162,10 +182,7 @@ class LevelParser(object):
     Baseclass for level parsers to derrive from.
     """
     
-    def __init__(self, path, sprites_path = None):
-        global SPRITES_PATH
-        if sprites_path:
-            SPRITES_PATH = sprites_path
+    def __init__(self, path):
         self._uri = path
         self.version = None
         self.board = [[None for y in range (64)] for x in range(64)]

@@ -17,6 +17,7 @@
 import os
 import sys
 from PIL import Image
+from common import setup_paths
 from nw_parser import DotNWParser
 from graal_parser import DotGraalParser
 
@@ -24,10 +25,10 @@ from graal_parser import DotGraalParser
 TILE_SIZE = 16
 
 
-def load_level(level_path, sprites_path):
+def load_level(level_path):
     for parser in [DotNWParser, DotGraalParser]:
         try:
-            return parser(level_path, sprites_path)
+            return parser(level_path)
         except AssertionError:
             continue
     raise Exception("Unable to determine level file format: %s" % level_path)
@@ -153,7 +154,9 @@ def add_actors(out_img, actors):
 
 
 def convert_to_png(level_path, tiles_path, sprites_path, out_path):
-    level = load_level(level_path, sprites_path)
+    setup_paths(sprites_path, out_path)
+
+    level = load_level(level_path)
     tiles = tile_segments(tiles_path)
     out_img = generate_map(level.board, tiles)
     layers = {

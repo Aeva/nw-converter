@@ -20,6 +20,7 @@ from xml.etree.ElementTree import Element, SubElement, tostring
 from xml.etree import ElementTree
 from xml.dom import minidom
 
+from common import setup_paths, relative_img_path
 from nw_parser import DotNWParser
 from graal_parser import DotGraalParser
 
@@ -91,7 +92,7 @@ def encode_as_tmx(level):
             tile.attrib['id'] = str(scope['next_gid'])
             scope['next_gid'] += 1
             img = SubElement(tile, 'image')
-            img.attrib['source'] = "../" + src
+            img.attrib['source'] = relative_img_path(src)
         return scope['images'][src]
 
     npc_layer = SubElement(root, 'objectgroup')
@@ -111,6 +112,7 @@ def encode_as_tmx(level):
 
 
 def convert_to_tmx(level_path, tiles_path, sprites_path, out_path):
+    setup_paths(sprites_path, out_path)
     level = load_level(level_path)
     tmx = encode_as_tmx(level)
 
