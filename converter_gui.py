@@ -22,7 +22,7 @@ import time
 from threading import Thread
 from multiprocessing import Pool, cpu_count
 import gi
-from gi.repository import GLib, Gtk, GObject
+from gi.repository import GLib, Gtk, Gdk, GObject
 from nw2png import convert_to_png
 from nw2tiled import convert_to_tmx
 
@@ -69,7 +69,12 @@ class ConverterWindow(object):
         self.progress_label = self.builder.get_object("progress_label")
         self.progress_bar = self.builder.get_object("progressbar")
         self.setup_filters()
+        self.setup_drag_n_drop()
         self.setup_working_dirs()
+
+    def setup_drag_n_drop(self):
+        targets = [("text/uri-list", 0, 0)]
+        self.levels_view.enable_model_drag_dest(targets, Gdk.DragAction.DEFAULT)
 
     def setup_filters(self):
         img_filter = Gtk.FileFilter()
@@ -114,7 +119,8 @@ class ConverterWindow(object):
         else:
             path, head = os.path.split(path)
             level = (os.path.abspath(path), head)
-            self.levels.add(level)
+            if re.match(extensions, head):
+                self.levels.add(level)
 
     def start_progress(self):
         self.window.set_sensitive(False)
@@ -194,6 +200,15 @@ class ConverterWindow(object):
         self.levels.clear()
         self.levels_store.clear()
 
+    def file_drop_event(self, widget, drag_context, x, y, data, info, time):
+        uris = data.get_uris()
+        prefix = "file://"
+        for uri in uris:
+            if uri.startswith(prefix):
+                path = uri[len(prefix):]
+                self.add_level(path)
+        self.refresh_levels_view()
+        
     def run_converter(self, *args, **kargs):
         tmx_button = self.builder.get_object("tmx_radio")
         png_button = self.builder.get_object("png_radio")

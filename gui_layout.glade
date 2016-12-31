@@ -44,6 +44,7 @@
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
                             <property name="model">level_path_store</property>
+                            <signal name="drag-data-received" handler="file_drop_event" swapped="no"/>
                           </object>
                         </child>
                       </object>
