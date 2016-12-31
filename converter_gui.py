@@ -39,7 +39,8 @@ def run_jobs(window, converter, jobs):
     start = time.time()
     pool = Pool(max(cpu_count(), 2))
     for job in jobs:
-        pool.apply_async(converter, job, callback=job_callback)
+        job_callback(converter(*job))
+        #pool.apply_async(converter, job, callback=job_callback)
 
     pool.close()
     pool.join()
@@ -64,7 +65,6 @@ class ConverterWindow(object):
         self.window = self.builder.get_object("main_window")
         self.window.show_all()
         self.about_popup = self.builder.get_object("about_popup")
-        self.chooser_popup = self.builder.get_object("file_chooser_popup")
         self.progress_popup = self.builder.get_object("progress_popup")
         self.progress_label = self.builder.get_object("progress_label")
         self.progress_bar = self.builder.get_object("progressbar")
@@ -72,19 +72,14 @@ class ConverterWindow(object):
         self.setup_working_dirs()
 
     def setup_filters(self):
-        level_filter = Gtk.FileFilter()
-        level_filter.set_name("Graal level (*.nw)")
-        level_filter.add_pattern("*.nw")
         img_filter = Gtk.FileFilter()
         img_filter.set_name("Image files")
         img_filter.add_mime_type("image/*")
-
-        self.chooser_popup.add_filter(level_filter)
         pics_chooser = self.builder.get_object("pics1_chooser")
         pics_chooser.add_filter(img_filter)
 
     def setup_working_dirs(self):
-        path = os.getcwd()
+        self.working_dir = path = os.getcwd()
         self.builder.get_object("pics1_chooser").set_current_folder(path)
         self.builder.get_object("search_path_chooser").set_current_folder(path)
         self.builder.get_object("output_path_chooser").set_current_folder(path)
@@ -167,12 +162,33 @@ class ConverterWindow(object):
         self.about_popup.hide()
 
     def show_add_files(self, *args, **kargs):
-        self.chooser_popup.set_select_multiple(True)
-        self.chooser_popup.run()
-        self.chooser_popup.hide()
-        for path in self.chooser_popup.get_filenames():
-            self.add_level(path)
-        self.refresh_levels_view()
+        chooser = Gtk.FileChooserDialog(
+            "Select Level Files for Conversion", self.window,
+            Gtk.FileChooserAction.OPEN,
+            (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+             Gtk.STOCK_OPEN, Gtk.ResponseType.OK))
+
+        level_filter = Gtk.FileFilter()
+        level_filter.set_name("Graal level (*.nw)")
+        level_filter.add_pattern("*.nw")
+        chooser.add_filter(level_filter)
+        chooser.set_select_multiple(True)
+        chooser.set_current_folder(self.working_dir)
+
+        response = chooser.run()
+        if response == Gtk.ResponseType.OK:
+            paths = chooser.get_filenames()
+            for path in paths:
+                self.add_level(path)
+            self.refresh_levels_view()
+
+            path = paths[-1]
+            if os.path.isdir(path):
+                self.working_dir = path
+            else:
+                self.working_dir = os.path.split(path)[0]
+                
+        chooser.destroy()
 
     def clear_levels(self, *args, **kargs):
         self.levels.clear()
