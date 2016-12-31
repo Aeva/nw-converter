@@ -18,6 +18,7 @@
 
 import os
 import re
+import sys
 import time
 from threading import Thread
 from multiprocessing import Pool, cpu_count
@@ -244,5 +245,8 @@ class ConverterWindow(object):
         
 if __name__ == "__main__":
     Gtk.init()
-    browser = ConverterWindow()
+    converter = ConverterWindow()
+    for path in sys.argv[0:]:
+        converter.add_level(path)
+    converter.refresh_levels_view()
     Gtk.main()
