@@ -90,6 +90,18 @@ class ConverterWindow(object):
         self.builder.get_object("search_path_chooser").set_current_folder(path)
         self.builder.get_object("output_path_chooser").set_current_folder(path)
 
+    def find_common_path(self, pathset):
+        def cut(path):
+            tail, head = os.path.split(path)
+            if tail == path:
+                return []
+            else:
+                return cut(tail) + [head]            
+        def clean(path):
+            return tuple(cut(os.path.abspath(path)))
+        paths = map(clean, pathset)
+        return "/" + os.path.join(*os.path.commonprefix(paths))
+
     def refresh_levels_view(self):
         all_levels = list(self.levels)
         all_levels.sort()
@@ -102,10 +114,12 @@ class ConverterWindow(object):
             for path, level in all_levels:
                 self.levels_store.append(None, [level])
         else:
+            common_path = self.find_common_path(all_paths)
             path_iters = {}
             for path, level in all_levels:
+                nice_path = os.path.relpath(path, common_path)
                 if not path_iters.has_key(path):
-                    path_iters[path] = self.levels_store.append(None, [path])
+                    path_iters[path] = self.levels_store.append(None, [nice_path])
                 self.levels_store.append(path_iters[path], [level])
 
     def add_level(self, path):
