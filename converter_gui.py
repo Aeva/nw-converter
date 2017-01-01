@@ -57,16 +57,7 @@ class ConverterWindow(object):
         self.levels = set()
         self.levels_store = self.builder.get_object("level_path_store")
         self.levels_view = self.builder.get_object("level_tree_view")
-
-        column = Gtk.TreeViewColumn('')
-        icon_cell = Gtk.CellRendererPixbuf()
-        text_cell = Gtk.CellRendererText()
-        text_cell.set_property("ellipsize", 3)
-        column.pack_start(icon_cell, False)
-        column.pack_end(text_cell, True)
-        column.add_attribute(icon_cell, "pixbuf", 0)
-        column.add_attribute(text_cell, "text", 1)
-        self.levels_view.append_column(column)
+        self.setup_treeview()
         
         self.window = self.builder.get_object("main_window")
         self.window.show_all()
@@ -77,6 +68,17 @@ class ConverterWindow(object):
         self.setup_filters()
         self.setup_drag_n_drop()
         self.setup_working_dirs()
+
+    def setup_treeview(self):
+        column = Gtk.TreeViewColumn('')
+        icon_cell = Gtk.CellRendererPixbuf()
+        text_cell = Gtk.CellRendererText()
+        text_cell.set_property("ellipsize", 3)
+        column.pack_start(icon_cell, False)
+        column.pack_end(text_cell, True)
+        column.add_attribute(icon_cell, "pixbuf", 0)
+        column.add_attribute(text_cell, "text", 1)
+        self.levels_view.append_column(column)
 
     def setup_drag_n_drop(self):
         targets = [("text/uri-list", 0, 0)]
