@@ -72,11 +72,13 @@ class ConverterWindow(object):
     def setup_treeview(self):
         column = Gtk.TreeViewColumn('')
         icon_cell = Gtk.CellRendererPixbuf()
+        icon_cell.set_alignment(0.0, 0.75)
         text_cell = Gtk.CellRendererText()
         text_cell.set_property("ellipsize", 3)
+        text_cell.set_padding(6, 0)
         column.pack_start(icon_cell, False)
         column.pack_end(text_cell, True)
-        column.add_attribute(icon_cell, "pixbuf", 0)
+        column.add_attribute(icon_cell, "icon_name", 0)
         column.add_attribute(text_cell, "text", 1)
         self.levels_view.append_column(column)
 
@@ -110,10 +112,8 @@ class ConverterWindow(object):
         return "/" + os.path.join(*os.path.commonprefix(paths))
 
     def refresh_levels_view(self):
-        def get_icon(name):
-            return Gtk.IconTheme.get_default().load_icon(name, Gtk.IconSize.MENU, 0)
-        dir_icon = get_icon("folder")
-        doc_icon = get_icon("document")
+        dir_icon = "folder"
+        doc_icon = "emblem-documents"
 
         all_levels = list(self.levels)
         all_levels.sort()

@@ -5,7 +5,7 @@
   <object class="GtkTreeStore" id="level_path_store">
     <columns>
       <!-- column-name icon -->
-      <column type="GdkPixbuf"/>
+      <column type="gchararray"/>
       <!-- column-name text -->
       <column type="gchararray"/>
     </columns>
