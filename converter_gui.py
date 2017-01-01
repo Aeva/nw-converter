@@ -23,6 +23,7 @@ import time
 from threading import Thread
 from multiprocessing import Pool, cpu_count
 import gi
+gi.require_version('Gtk', '3.0')
 from gi.repository import GLib, Gtk, Gdk, GObject
 from nw2png import convert_to_png
 from nw2tiled import convert_to_tmx
@@ -90,6 +91,9 @@ class ConverterWindow(object):
         img_filter = Gtk.FileFilter()
         img_filter.set_name("Image files")
         img_filter.add_mime_type("image/*")
+        img_filter.add_pattern("*.png")
+        img_filter.add_pattern("*.gif")
+        
         pics_chooser = self.builder.get_object("pics1_chooser")
         pics_chooser.add_filter(img_filter)
 
@@ -121,11 +125,15 @@ class ConverterWindow(object):
 
         self.levels_store.clear()
 
+        if not all_paths:
+            return
+        
         if len(all_paths) == 1:
             # don't bother with nesting
             for path, level in all_levels:
                 self.levels_store.append(None, [doc_icon, level])
         else:
+            import pdb; pdb.set_trace()
             common_path = self.find_common_path(all_paths)
             path_iters = {}
             for path, level in all_levels:
@@ -230,10 +238,10 @@ class ConverterWindow(object):
 
     def file_drop_event(self, widget, drag_context, x, y, data, info, time):
         uris = data.get_uris()
-        prefix = "file://"
+        prefix = r'^file:///([A-Z]:/){0,1}'
         for uri in uris:
-            if uri.startswith(prefix):
-                path = uri[len(prefix):]
+            if re.match(prefix, uri):
+                path = re.sub(prefix, '/', uri)
                 self.add_level(path)
         self.refresh_levels_view()
         
