@@ -4,6 +4,8 @@
   <!-- interface-naming-policy project-wide -->
   <object class="GtkTreeStore" id="level_path_store">
     <columns>
+      <!-- column-name icon -->
+      <column type="GdkPixbuf"/>
       <!-- column-name text -->
       <column type="gchararray"/>
     </columns>

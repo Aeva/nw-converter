@@ -58,10 +58,15 @@ class ConverterWindow(object):
         self.levels_store = self.builder.get_object("level_path_store")
         self.levels_view = self.builder.get_object("level_tree_view")
 
-        renderer = Gtk.CellRendererText()
-        renderer.set_property("ellipsize", 3)
-        title_column = Gtk.TreeViewColumn("Tab Title", renderer, text=0)
-        self.levels_view.append_column(title_column)
+        column = Gtk.TreeViewColumn('')
+        icon_cell = Gtk.CellRendererPixbuf()
+        text_cell = Gtk.CellRendererText()
+        text_cell.set_property("ellipsize", 3)
+        column.pack_start(icon_cell, False)
+        column.pack_end(text_cell, True)
+        column.add_attribute(icon_cell, "pixbuf", 0)
+        column.add_attribute(text_cell, "text", 1)
+        self.levels_view.append_column(column)
         
         self.window = self.builder.get_object("main_window")
         self.window.show_all()
@@ -103,6 +108,11 @@ class ConverterWindow(object):
         return "/" + os.path.join(*os.path.commonprefix(paths))
 
     def refresh_levels_view(self):
+        def get_icon(name):
+            return Gtk.IconTheme.get_default().load_icon(name, Gtk.IconSize.MENU, 0)
+        dir_icon = get_icon("folder")
+        doc_icon = get_icon("document")
+
         all_levels = list(self.levels)
         all_levels.sort()
         all_paths = set([path for path, level in all_levels])
@@ -112,15 +122,16 @@ class ConverterWindow(object):
         if len(all_paths) == 1:
             # don't bother with nesting
             for path, level in all_levels:
-                self.levels_store.append(None, [level])
+                self.levels_store.append(None, [doc_icon, level])
         else:
             common_path = self.find_common_path(all_paths)
             path_iters = {}
             for path, level in all_levels:
                 nice_path = os.path.relpath(path, common_path)
                 if not path_iters.has_key(path):
-                    path_iters[path] = self.levels_store.append(None, [nice_path])
-                self.levels_store.append(path_iters[path], [level])
+                    path_iters[path] = self.levels_store.append(
+                        None, [dir_icon, nice_path])
+                self.levels_store.append(path_iters[path], [doc_icon, level])
 
     def add_level(self, path):
         #extensions = r'.+\.(nw|graal|zelda)$'
