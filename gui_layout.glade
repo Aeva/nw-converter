@@ -388,7 +388,7 @@ See the GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
 </property>
-    <property name="logo">icon_64.svg</property>
+    <property name="logo">icon_16.svg</property>
     <child internal-child="vbox">
       <object class="GtkVBox" id="dialog-vbox3">
         <property name="visible">True</property>
