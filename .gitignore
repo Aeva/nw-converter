@@ -1,6 +1,9 @@
 *.nw
 *.png
 *.gif
+build/
+dist/
+*.zip
 sprites/
 out/
 *~
