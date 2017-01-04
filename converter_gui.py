@@ -287,8 +287,5 @@ def run_main(args=sys.argv):
     Gtk.main()
 
 
-raise Exception("oh noes!")
-
-        
 if __name__ == "__main__":
     run_main()
