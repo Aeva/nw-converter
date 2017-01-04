@@ -277,11 +277,18 @@ class ConverterWindow(object):
     def shutdown(self, *args, **kargs):
         Gtk.main_quit()
 
-        
-if __name__ == "__main__":
+
+def run_main(args=sys.argv):
     Gtk.init()
     converter = ConverterWindow()
-    for path in sys.argv[0:]:
+    for path in args[0:]:
         converter.add_level(path)
     converter.refresh_levels_view()
     Gtk.main()
+
+
+raise Exception("oh noes!")
+
+        
+if __name__ == "__main__":
+    run_main()
