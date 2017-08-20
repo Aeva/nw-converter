@@ -50,51 +50,73 @@ class DotGraalParser(LevelParser):
             # pick out the two characters that contain the bytes for
             # the packet, and unpack them as an unsigned short
             seek = int(offset + math.floor((bit_index / 8.0)))
+            assert seek+2 < len(raw)            
             chaff = (bit_index % 8)
             pick = struct.unpack("<H", raw[seek:seek+2])[0]
 
             # bit shift and mask to get the 13 bits that are the
             # actual packet
             packet = (pick >> chaff) & packet_mask
-            #import pdb; pdb.set_trace()
-            
-            # decode data from the packet
+            return packet
+
+        def decode_tile(bit_index):
+            packet = get_packet(bit_index)
             repeat_mode = packet & repeat_mask
+            double_mode = packet & double_mask if repeat_mode else 0
+            count = packet & count_mask if repeat_mode else 0
+
             if repeat_mode:
-                count = packet & count_mask
-                double_mode = packet & double_mask
-                return count, double_mode
+                first = get_packet(bit_index + packet_size)
+                if double_mode:
+                    second = get_packet(bit_index + packet_size * 2)
+                    return {
+                        "next" : bit_index + packet_size * 3,
+                        "mode" : "double-repeat",
+                        "data" : (first & tile_mask, second & tile_mask),
+                        "count" : count,
+                    }
+                else:
+                    return {
+                        "next" : bit_index + packet_size * 2,
+                        "mode" : "single-repeat",
+                        "data" : first & tile_mask,
+                        "count" : count,
+                    }
             else:
-                return None, packet & tile_mask
+                return {
+                    "next" : bit_index + packet_size,
+                    "mode" : "single",
+                    "data" : packet & tile_mask,
+                }
 
         # now we loop until the tiles array is full
         tiles = []
         stop_at = 64**2
         bit_index = 0
         while len(tiles) < stop_at:
-            count, data = get_packet(bit_index)
-            bit_index += packet_size
+            tile = decode_tile(bit_index)
+            bit_index = tile["next"]
             
-            if count is None:
+            if tile["mode"] == "single":
                 # draw a singular tile
-                tiles.append(data)
+                print "single draw"
+                tiles.append(tile["data"])
 
+            elif tile["mode"] == "single-repeat":
+                # draw a single tile N times
+                print "single-repeat: " + str(tile["count"])
+                for i in range(tile["count"]):
+                    tiles.append(tile["data"])
+
+            elif tile["mode"] == "double-repeat":
+                # draw a pair of tiles N times
+                print "double-repeat: " + str(tile["count"])
+                for i in range(tile["count"]):
+                    tiles.append(tile["data"][0])
+                    tiles.append(tile["data"][1])
             else:
-                # packet describes a run length
-                packet = get_packet(bit_index)
-                bit_index += packet_size
-                assert packet[0] is None
-                stamp = [packet[1]]
-                
-                if data:
-                    # double repeat mode
-                    packet = get_packet(bit_index)
-                    bit_index += packet_size
-                    assert packet[0] is None
-                    stamp.append(packet[1])
-
-                for i in range(count):
-                    tiles += stamp
+                raise NotImplementedError(
+                    "Unknown tile mode: " + tile["mode"])
                     
         after_tiles = int(offset + math.ceil((bit_index / 8.0)))
         test = raw[after_tiles:]
