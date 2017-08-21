@@ -47,16 +47,25 @@ class DotGraalParser(LevelParser):
         tile_mask = packet_mask - repeat_mask
         
         def get_packet(bit_index):
-            # pick out the two characters that contain the bytes for
-            # the packet, and unpack them as an unsigned short
+            # Pick the the byte which contains the start of the
+            # packet, and determine the offset within that byte.
             seek = int(offset + math.floor((bit_index / 8.0)))
-            assert seek+2 < len(raw)            
-            chaff = (bit_index % 8)
-            pick = struct.unpack("<H", raw[seek:seek+2])[0]
+            start = (bit_index % 8)
+            span = int(math.ceil((start + packet_size) / 8.0))
+            cut = (span * 8) - (start + packet_size)
+            assert seek+span < len(raw)
+            assert cut + start + packet_size == span * 8
+
+            # Read out however many bytes the packet spans.
+            packet = 0
+            for i in range(span):
+                char = struct.unpack("<B", raw[seek+i])[0]
+                packet += char << i * 8
 
             # bit shift and mask to get the 13 bits that are the
             # actual packet
-            packet = (pick >> chaff) & packet_mask
+            packet = (packet >> cut) & packet_mask
+            print " - {} : {}".format(bit_index, bin(packet))
             return packet
 
         def decode_tile(bit_index):
