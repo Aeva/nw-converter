@@ -29,7 +29,7 @@ BASE64 = string.ascii_uppercase + string.ascii_lowercase + string.digits + "+/"
 
 class DotNWParser(LevelParser):
     """
-    This class takes a path to a .graal encoded file, decodes it, and
+    This class takes a path to a .nw encoded file, decodes it, and
     provides a means of easily accessing the contained data.
     """
 

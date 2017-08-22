@@ -144,8 +144,7 @@ class ConverterWindow(object):
                 self.levels_store.append(path_iters[path], [doc_icon, level])
 
     def add_level(self, path):
-        #extensions = r'.+\.(nw|graal|zelda)$'
-        extensions = r'.+\.(nw)$'
+        extensions = r'.+\.(nw|graal)$'
         if os.path.isdir(path):
             for base_dir, dirs, files in os.walk(path):
                 for file_ in files:
@@ -214,6 +213,12 @@ class ConverterWindow(object):
         level_filter.set_name("Graal level (*.nw)")
         level_filter.add_pattern("*.nw")
         chooser.add_filter(level_filter)
+
+        level_filter = Gtk.FileFilter()
+        level_filter.set_name("Graal level (*.graal)")
+        level_filter.add_pattern("*.graal")
+        chooser.add_filter(level_filter)
+
         chooser.set_select_multiple(True)
         chooser.set_current_folder(self.working_dir)
 
