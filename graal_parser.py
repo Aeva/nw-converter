@@ -45,27 +45,16 @@ class DotGraalParser(LevelParser):
         double_mask = 0x100
         count_mask = 0xFF
         tile_mask = packet_mask - repeat_mask
-        
+
         def get_packet(bit_index):
-            # Pick the the byte which contains the start of the
-            # packet, and determine the offset within that byte.
             seek = int(offset + math.floor((bit_index / 8.0)))
             start = (bit_index % 8)
-            span = int(math.ceil((start + packet_size) / 8.0))
-            cut = (span * 8) - (start + packet_size)
-            assert seek+span < len(raw)
-            assert cut + start + packet_size == span * 8
-
-            # Read out however many bytes the packet spans.
-            packet = 0
-            for i in range(span):
-                char = struct.unpack("<B", raw[seek+i])[0]
-                packet += char << i * 8
-
-            # bit shift and mask to get the 13 bits that are the
-            # actual packet
-            packet = (packet >> cut) & packet_mask
-            print " - {} : {}".format(bit_index, bin(packet))
+            count = int(math.ceil((start + packet_size) / 8.0))
+            bits = 0
+            for i in range(count):
+                assert seek + i <= len(raw)
+                bits += struct.unpack("<B", raw[seek+i])[0] << i * 8
+            packet = (bits >> start) & packet_mask
             return packet
 
         def decode_tile(bit_index):
@@ -108,18 +97,15 @@ class DotGraalParser(LevelParser):
             
             if tile["mode"] == "single":
                 # draw a singular tile
-                print "single draw"
                 tiles.append(tile["data"])
 
             elif tile["mode"] == "single-repeat":
                 # draw a single tile N times
-                print "single-repeat: " + str(tile["count"])
                 for i in range(tile["count"]):
                     tiles.append(tile["data"])
 
             elif tile["mode"] == "double-repeat":
                 # draw a pair of tiles N times
-                print "double-repeat: " + str(tile["count"])
                 for i in range(tile["count"]):
                     tiles.append(tile["data"][0])
                     tiles.append(tile["data"][1])
