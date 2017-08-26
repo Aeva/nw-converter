@@ -33,13 +33,16 @@ class DotNWParser(LevelParser):
     provides a means of easily accessing the contained data.
     """
 
+    def file_version(self, reader):
+        header = reader.read(8)
+        assert header == "GLEVNW01"
+        return 1
+
+
     def parse(self):
         with open(self._uri, "r") as reader:
-            self.version = reader.read(8)
-            reader.seek(0)
             raw_data = reader.read().replace("\r\n", "\n")
             lines = raw_data.split("\n")
-        assert self.version == "GLEVNW01"
 
         pattern = r'BOARD (\d+) (\d+) (\d+) (\d+) ([{0}]+)'.format(BASE64)
         for line in lines:

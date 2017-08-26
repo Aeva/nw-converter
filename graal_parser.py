@@ -15,7 +15,6 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import re
 import sys
 import math
 import struct
@@ -29,17 +28,29 @@ class DotGraalParser(LevelParser):
     provides a means of easily accessing the contained data.
     """
 
+    def file_version(self, reader):
+        header = reader.read(8)
+        revisions = ("Z3-V1.01", # <- untested
+                     "Z3-V1.02", # <- untested
+                     "Z3-V1.03",
+                     "Z3-V1.04",
+                     "GR-V1.01",
+                     "GR-V1.02",
+                     "GR-V1.03")
+        assert(header in revisions)
+        return revisions.index(header) + 1
+
+    
     def parse(self):
         raw = open(self._uri, "r").read()
-        self.version = raw[:8]
-        assert(re.match(r'(GR|Z3)-V1.0[1-4]', self.version))
 
         # we start at 8 to seek just after the file header
         offset = 8
         bits_read = 0
 
-        # tile data is packed in intervals of 13 bits
-        packet_size = 13
+        # tile data is packed in intervals of 12 or 13 bits
+        packet_size = 13 if self.version > 5 else 12
+        
         packet_mask = (2**packet_size)-1
         repeat_mask = 2**(packet_size-1)
         double_mask = 0x100

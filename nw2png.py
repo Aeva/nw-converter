@@ -13,25 +13,13 @@
 
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- 
+
 import os
 import sys
 from PIL import Image
-from common import setup_paths
-from nw_parser import DotNWParser
-from graal_parser import DotGraalParser
 
-
-TILE_SIZE = 16
-
-
-def load_level(level_path):
-    for parser in [DotNWParser, DotGraalParser]:
-        try:
-            return parser(level_path)
-        except AssertionError:
-            continue
-    raise Exception("Unable to determine level file format: %s" % level_path)
+from util import load_level
+from common import setup_paths, TILE_SIZE
 
 
 def make_box(x, y, w=TILE_SIZE, h=TILE_SIZE):

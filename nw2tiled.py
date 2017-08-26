@@ -22,18 +22,8 @@ from xml.dom import minidom
 
 from PIL import Image
 
+from util import load_level
 from common import setup_paths, relative_img_path
-from nw_parser import DotNWParser
-from graal_parser import DotGraalParser
-
-
-def load_level(level_path):
-    for parser in [DotNWParser, DotGraalParser]:
-        try:
-            return parser(level_path)
-        except AssertionError:
-            continue
-    raise Exception("Unable to determine level file format: %s" % level_path)
 
 
 def pretty_print(elem):

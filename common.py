@@ -62,8 +62,6 @@ def img_search(img_name):
     return None
 
 
-
-
 class Actor(object):
     """
     Represents an interactible game object.
@@ -201,15 +199,25 @@ class LevelParser(object):
     
     def __init__(self, path):
         self._uri = path
-        self.version = None
+        with open(self._uri, "r") as reader:
+            self.version = self.file_version(reader)
         self.board = [[None for y in range (64)] for x in range(64)]
         self.links = []
         self.signs = []
         self.actors = []
         self.effects = []
+
+        
+    def populate(self):
         self.parse()
         self.actors.sort(self._actor_sort_fn)
         self.find_area_effects()
+
+        
+    def file_version(self):
+        # Note: This should assert if the file given is not
+        # appropriate for the parser.
+        raise NotImplementedError("Baseclass method.")
 
         
     def parse(self):
