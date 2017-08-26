@@ -23,6 +23,7 @@ if __name__ == "__main__":
     assert os.path.isdir(load_path)
     found = glob.glob(os.path.join(load_path, "*.nw"))
     found += glob.glob(os.path.join(load_path, "*.graal"))
+    found += glob.glob(os.path.join(load_path, "*.zelda"))
     picsfile = "sprites/pics1.png"
     if len(sys.argv) > 2:
         picsfile = sys.argv[2]

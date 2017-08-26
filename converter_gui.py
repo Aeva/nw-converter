@@ -28,6 +28,7 @@ gi.require_version('Gtk', '3.0')
 from gi.repository import GLib, Gtk, Gdk, GObject
 from nw2png import convert_to_png
 from nw2tiled import convert_to_tmx
+from util import find_level_parser
 
 
 def run_jobs(window, converter, jobs):
@@ -144,17 +145,24 @@ class ConverterWindow(object):
                 self.levels_store.append(path_iters[path], [doc_icon, level])
 
     def add_level(self, path):
-        extensions = r'.+\.(nw|graal)$'
+        def is_level(path):
+            try:
+                find_level_parser(path)
+                return True
+            except:
+                print "Not a valid level file: %s" % path
+                return False
+                
         if os.path.isdir(path):
             for base_dir, dirs, files in os.walk(path):
                 for file_ in files:
                     path = os.path.join(base_dir, file_)
-                    if re.match(extensions, path):
+                    if is_level(path):
                         self.add_level(path)
         else:
-            path, head = os.path.split(path)
-            level = (os.path.abspath(path), head)
-            if re.match(extensions, head):
+            if os.path.isfile(path) and is_level(path):
+                path, head = os.path.split(path)
+                level = (os.path.abspath(path), head)
                 self.levels.add(level)
 
     def start_progress(self):
@@ -210,15 +218,17 @@ class ConverterWindow(object):
              Gtk.STOCK_OPEN, Gtk.ResponseType.OK))
 
         level_filter = Gtk.FileFilter()
-        level_filter.set_name("Graal level (*.nw)")
+        level_filter.set_name("Graal Level Files")
         level_filter.add_pattern("*.nw")
-        chooser.add_filter(level_filter)
-
-        level_filter = Gtk.FileFilter()
-        level_filter.set_name("Graal level (*.graal)")
         level_filter.add_pattern("*.graal")
+        level_filter.add_pattern("*.zelda")
         chooser.add_filter(level_filter)
-
+        
+        level_filter = Gtk.FileFilter()
+        level_filter.set_name("All Files")
+        level_filter.add_pattern("*")
+        chooser.add_filter(level_filter)
+        
         chooser.set_select_multiple(True)
         chooser.set_current_folder(self.working_dir)
 
@@ -286,8 +296,9 @@ class ConverterWindow(object):
 def run_main(args=sys.argv):
     Gtk.init()
     converter = ConverterWindow()
-    for path in args[0:]:
-        converter.add_level(path)
+    for path in args[1:]:
+        if os.path.isfile(path):
+            converter.add_level(path)
     converter.refresh_levels_view()
     Gtk.main()
 
