@@ -23,7 +23,7 @@ from xml.dom import minidom
 from PIL import Image
 
 from util import load_level
-from common import setup_paths, relative_img_path
+from parser_common import setup_paths, relative_img_path
 
 
 def pretty_print(elem):

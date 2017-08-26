@@ -20,7 +20,7 @@ import sys
 import string
 from PIL import Image
 
-from common import LevelParser, Actor, Sign, Link
+from parser_common import LevelParser, Actor, Sign, Link
 
 
 BASE64 = string.ascii_uppercase + string.ascii_lowercase + string.digits + "+/"

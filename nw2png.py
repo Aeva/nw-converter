@@ -19,7 +19,7 @@ import sys
 from PIL import Image
 
 from util import load_level
-from common import setup_paths, TILE_SIZE
+from parser_common import setup_paths, TILE_SIZE
 
 
 def make_box(x, y, w=TILE_SIZE, h=TILE_SIZE):

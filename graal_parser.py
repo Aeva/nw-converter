@@ -19,7 +19,7 @@ import sys
 import math
 import struct
 
-from common import LevelParser
+from parser_common import LevelParser
 
 
 class DotGraalParser(LevelParser):
