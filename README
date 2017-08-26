@@ -1,30 +1,55 @@
-Collection of scripts for converting graal ".nw" level files and
-corresponding game data into png image files.
+Collection of scripts for converting graal ".nw", ".graal", and
+".zelda" level files and corresponding game data into png image files
+or tiled tmx files.
 
-This might later also later include a tool for converting ".nw" files
-to a format supported by the tiled map editor, but that functionality
-is not present at the time of writing.
+Users interested in converting their levels into something more
+archivally friendly for the purpose of viewing will want to use the
+nw2png.py utility.
 
-My interest in converting level files to images is for archival
-purposes and nostalgia.
+Users interested in converting their data into an open format, so that
+it can be adapted for use with game engines that support the Tiled map
+editor tmx format will want to use the nw2tiled.py utility instead.
+
+
+Please note the following limitations:
+
+ - Support for files with the headers "Z3-V1.01" or "Z3-V1.02" is
+   speculative, as I don't have any examples to test with.
+
+ - For .graal and .zelda files, this project currently can only parse
+   tile data.
+
+ - For .nw files, there is very limited support for NPCs: the
+   appearance of NPCs is approximated by pattern matching the NPC's
+   gscript.
+
+ - There is currently no support for generating collision data in
+   tmx exports.
+
+ - There is no intention to support converting gscript to other
+   languages, nor is there any intention to provide a means of
+   executing gscript.
+
 
 To use this script, create a directory within this project called
 sprites and copy your pics1.png file into that directory, as well as
 any folders of images to be used by NPCs.
 
-You can then run the following commands:
 
- > python nw2png.py path_to_level.nw [alternate_pics1.png] [alternate output file]
- > python batch.py folder_of_levels [alternate_pics1.png]
- > python nw_parser.py path_to_level.nw
+To convert levels to png images, use the nw2png.py script:
 
-nw2png.py converts a level and its npcs to a png file.  It is able to do
-light effects, zoom, and reposition npcs based on their scripts.
+ > python nw2png.py path_to_level.nw [path_to_pics1.png] [output_file.png]
 
-batch.py calls nw2png on the level files in a provided folder
 
-nw_parser.py is a .nw parser, and when called directly, it outputs
-debug info.  nw_parser.py is imported by nw2png.py
+To convert levels to Tiled tmx maps, use the nw2tiled.py script:
+
+ > python nw2tiled.py path_to_level.nw [path_to_pics1.png] [output_file.tmx]
+
+
+An experimental GTK3 frontend is also available, which supports
+conversion to either png or tmx.
+
+ > python converter_gui.py
 
 
 All of the python source files in this repository are released under
