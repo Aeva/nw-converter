@@ -20,6 +20,7 @@ import os
 import re
 import sys
 import time
+import urllib
 from threading import Thread
 from multiprocessing import Pool, cpu_count
 import gi
@@ -133,7 +134,6 @@ class ConverterWindow(object):
             for path, level in all_levels:
                 self.levels_store.append(None, [doc_icon, level])
         else:
-            import pdb; pdb.set_trace()
             common_path = self.find_common_path(all_paths)
             path_iters = {}
             for path, level in all_levels:
@@ -247,7 +247,7 @@ class ConverterWindow(object):
         for uri in uris:
             if re.match(prefix, uri):
                 path = re.sub(prefix, '/', uri)
-                self.add_level(path)
+                self.add_level(urllib.unquote(path))
         self.refresh_levels_view()
         
     def run_converter(self, *args, **kargs):
