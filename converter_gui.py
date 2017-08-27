@@ -222,6 +222,7 @@ class ConverterWindow(object):
         level_filter.add_pattern("*.nw")
         level_filter.add_pattern("*.graal")
         level_filter.add_pattern("*.zelda")
+        level_filter.add_pattern("*.editor")
         chooser.add_filter(level_filter)
         
         level_filter = Gtk.FileFilter()

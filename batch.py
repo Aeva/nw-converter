@@ -24,6 +24,7 @@ if __name__ == "__main__":
     found = glob.glob(os.path.join(load_path, "*.nw"))
     found += glob.glob(os.path.join(load_path, "*.graal"))
     found += glob.glob(os.path.join(load_path, "*.zelda"))
+    found += glob.glob(os.path.join(load_path, "*.editor"))
     picsfile = "sprites/pics1.png"
     if len(sys.argv) > 2:
         picsfile = sys.argv[2]
