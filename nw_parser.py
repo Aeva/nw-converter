@@ -19,12 +19,10 @@ import os
 import sys
 import string
 from PIL import Image
-
-from parser_common import LevelParser, Actor, Sign, Link
+from parser_common import LevelParser
 
 
 BASE64 = string.ascii_uppercase + string.ascii_lowercase + string.digits + "+/"
-
 
 
 class DotNWParser(LevelParser):
@@ -33,9 +31,8 @@ class DotNWParser(LevelParser):
     provides a means of easily accessing the contained data.
     """
 
-    def file_version(self, reader):
-        header = reader.read(8)
-        assert header == "GLEVNW01"
+    def file_version(self):
+        assert self.header == "GLEVNW01"
         return 1
 
 
@@ -92,19 +89,15 @@ class DotNWParser(LevelParser):
             x, y = int(npc[1]), int(npc[2])
             img = npc[0] if npc[0] != '-' else None
             src = npc[3].strip()
-            self.actors.append(Actor(img, x, y, src))
+            self.add_actor(x, y, img, src)
 
 
     def find_links(self, raw_data):
-        pattern = r'^LINK ([^\s]+) (\d+) (\d+) (\d+) (\d+) ([^\s]+) ([^\s]+)$'
-        flags = re.DOTALL | re.MULTILINE
+        pattern = r'^LINK (.+) (\d+) (\d+) (\d+) (\d+) ([^\s]+) ([^\s]+)$'
+        flags = re.MULTILINE
         links = re.findall(pattern, raw_data, flags)
-        for link in links:
-            target = link[0]
-            x, y, w, h = map(int, link[1:5])
-            dest_x = link[5]
-            dest_y = link[6]
-            self.links.append(Link(target, x, y, w, h, dest_x, dest_y))
+        for link_params in links:
+            self.add_link(*link_params)
 
 
     def find_signs(self, raw_data):
@@ -114,23 +107,4 @@ class DotNWParser(LevelParser):
         for sign in signs:
             x, y = int(sign[0]), int(sign[1])
             text = sign[2]
-            self.signs.append(Sign(x, y, text))
-
-
-
-
-if __name__ == "__main__":
-    path = sys.argv[1]
-    level = DotNWParser(path)
-    for x in range(64):
-        row = ""
-        for y in range(64):
-            tile = level.board[x][y]
-            assert tile is not None
-            row += tile["code"]
-        print row
-
-    for actor in level.actors:
-        print "--------------------------------"
-        print actor.img
-        print actor.src
+            self.add_sign(x, y, text)

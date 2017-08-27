@@ -67,7 +67,7 @@ class Actor(object):
     Represents an interactible game object.
     """
     
-    def __init__(self, image, x, y, src):
+    def __init__(self, x, y, image, src):
         self.src = src
         self.image = None
         self.x = x
@@ -186,7 +186,7 @@ class Sign(object):
 class Link(object):
     def __init__(self, target, x, y, w, h, new_x, new_y):
         self.target = target
-        self.area = (x, y, w, h)
+        self.area = map(int, (x, y, w, h))
         self.dest = (new_x, new_y)
 
 
@@ -200,7 +200,9 @@ class LevelParser(object):
     def __init__(self, path):
         self._uri = path
         with open(self._uri, "r") as reader:
-            self.version = self.file_version(reader)
+            self.header = reader.read(8)
+        self.version = self.file_version()
+
         self.board = [[None for y in range (64)] for x in range(64)]
         self.links = []
         self.signs = []
@@ -224,6 +226,42 @@ class LevelParser(object):
         raise NotImplementedError("Baseclass method.")
 
     
+    def add_link(self, target, link_x, link_y, width, height, dest_x, dest_y):
+        link = Link(target, link_x, link_y, width, height, dest_x, dest_y)
+        self.links.append(link)
+
+
+    def add_actor(self, x, y, image, src):
+        self.actors.append(Actor(x, y, image, src))
+
+
+    def add_sign(self, x, y, text):
+        self.signs.append(Sign(x, y, text))
+
+
+    def print_debug_info(self):
+        print "FILE HEADER:"
+        print " - %s" % self.header
+        print
+        print
+        print "LEVEL LINKS:"
+        for link in self.links:
+            print " - {} -> {} {}".format(link.area, link.target, link.dest)
+        print
+        print
+        print "SIGNS:"
+        for sign in self.signs:
+            print " - {} -> {}".format(self.area, self.text)
+        print
+        print
+        print "ACTORS:"
+        for actor in self.actors:
+            print " - {} {}".format((actor.x, actor.y), actor.image)
+            print actor.src
+        print
+        print
+
+        
     def find_area_effects(self):
         """
         Searches through actor scripts associated with this level, to find

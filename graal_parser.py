@@ -15,11 +15,29 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import re
 import sys
 import math
 import struct
 
 from parser_common import LevelParser
+
+
+REVISIONS = ("Z3-V1.01", # <- untested
+             "Z3-V1.02", # <- untested
+             "Z3-V1.03",
+             "Z3-V1.04",
+             "GR-V1.01",
+             "GR-V1.02",
+             "GR-V1.03")
+
+Z3_1 = 0
+Z3_2 = 1
+Z3_3 = 2
+Z3_4 = 3
+GR_1 = 4
+GR_2 = 5
+GR_3 = 6
 
 
 class DotGraalParser(LevelParser):
@@ -28,17 +46,9 @@ class DotGraalParser(LevelParser):
     provides a means of easily accessing the contained data.
     """
 
-    def file_version(self, reader):
-        header = reader.read(8)
-        revisions = ("Z3-V1.01", # <- untested
-                     "Z3-V1.02", # <- untested
-                     "Z3-V1.03",
-                     "Z3-V1.04",
-                     "GR-V1.01",
-                     "GR-V1.02",
-                     "GR-V1.03")
-        assert(header in revisions)
-        return revisions.index(header) + 1
+    def file_version(self):
+        assert(self.header in REVISIONS)
+        return REVISIONS.index(self.header)
 
     
     def parse(self):
@@ -49,7 +59,7 @@ class DotGraalParser(LevelParser):
         bits_read = 0
 
         # tile data is packed in intervals of 12 or 13 bits
-        packet_size = 13 if self.version > 5 else 12
+        packet_size = 13 if self.version >= GR_2 else 12
         
         packet_mask = (2**packet_size)-1
         repeat_mask = 2**(packet_size-1)
@@ -124,10 +134,7 @@ class DotGraalParser(LevelParser):
                 raise NotImplementedError(
                     "Unknown tile mode: " + tile["mode"])
                     
-        after_tiles = int(offset + math.ceil((bit_index / 8.0)))
-        test = raw[after_tiles:]
         assert len(tiles) == stop_at
-
         for i in range(len(tiles)):
             y = int(math.floor(i/64.0))
             x = i%64
@@ -138,9 +145,91 @@ class DotGraalParser(LevelParser):
             by = ty % 32 
             self.board[x][y] = (bx, by)
 
+        if self.version <= Z3_2:
+            # Return early for the first two revisions, since we don't
+            # what features they support.
+            #return
+            pass
+
+        after_tiles = int(offset + math.ceil((bit_index / 8.0)))
+        remainder = raw[after_tiles:]
+
+        def cut(stop, data):
+            pattern = r'^.*?' + stop
+            matcher = re.match(pattern, data, re.DOTALL | re.MULTILINE)
+            found = matcher.group()
+            return found, data[len(found):]
+
+        links, remainder = cut(r'^[^#]*?#', remainder)
+        if links:
+            self.parse_links(links)
+        return
+
+        # mystery, remainder = cut("\n\xff\xff\xff\n", remainder)
+        # if mystery:
+        #     # TODO what is this?
+        #     # sign text?  treasure boxes?  baddies?
+        #     pass
+
+        # if self.version <= Z3_4:
+        #     # TODO returning early for now, but it seems like 0xFFFFFF
+        #     # is a meaningful delimiter?  Some Z3-V1.04 files have at
+        #     # least two sections after block of level links.
+
+        #     # It seems in later revisons, sign text probably appears
+        #     # after NPC scripts, so the bit after 'mystery' is
+        #     # probably sign text, and 'mystery' is probably baddies or
+        #     # treasure boxes.
+
+        #     # Actually
+        #     return
+
+        # if self.version >= GR_1:
+        #     # GR-V1.01 seems to be when NPCs were introduced.
+        #     # Observations:
+        #     #
+        #     # - 0xA7 seems to be a command delimiter, instead of
+        #     #   semicolons.
+        #     #
+        #     # - Following a script are two "#\n"
+        #     #
+        #     # - After that is a block is binary encoded, but 0x80
+        #     #   shows up several several times in a way that stands
+        #     #   out.  It might be a delimeter, possibly for sign text,
+        #     #   though it might just be my imagination.
+
+        #     # - In one example though, 'mystery' and 'remainder' both
+        #     #   appear to contain a mix of ascii encoded characters
+        #     #   that spell out words and non-ascii.  I wonder if this
+        #     #   is baddy text or something?  That example does not
+        #     #   have NPCs, though.
+
+        #     # - "\n\xff\xff\xff\x00\n#\n"?
+
+        #     # - semicolons are also present in the npc block, so 0xA7
+        #     #   might actually be for newlines instead?
+        #     #
+        #     # - new line character seems to be the delimiter for
+        #     #   individual npcs
+        #     npcs, remainder = cut(r'^(..[^#]+#[^\n]+\n)+#', remainder)
+        #     self.parse_npcs(npcs)
+
         
-if __name__ == "__main__":
-    path = sys.argv[1]
-    print "Debug info for parsing file:", path
-    level = DotGraalParser(path)
-    print " - file version:", level.version
+    def parse_links(self, blob):
+        pattern = r'^(.+) (\d+) (\d+) (\d+) (\d+) ([^\s]+) ([^\s]+)$'
+        flags = re.MULTILINE
+        links = re.findall(pattern, blob, flags)
+        for link_params in links:
+            self.add_link(*link_params)
+
+
+    def parse_npcs(self, blob):
+        pattern = r'^(.)(.)([^#]*)#(.*)$'
+        flags = re.MULTILINE
+        npcs = re.findall(pattern, blob, flags)
+        for params in npcs:
+            npc_x = ord(params[0])
+            npc_y = ord(params[1])
+            npc_img = params[2]
+            npc_src = params[3].replace("\xa7", "\n")
+            self.add_actor(npc_x, npc_y, npc_img, npc_src)
