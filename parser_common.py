@@ -175,6 +175,17 @@ class Actor(object):
 
 
 
+class Baddy(object):
+    def __init__(self, x, y, kind, messages):
+        self.x = x
+        self.y = y
+        self.kind = kind
+        assert(len(messages) == 3)
+        self.messages = messages
+
+
+
+
 class Sign(object):
     def __init__(self, x, y, text):
         self.text = text
@@ -207,6 +218,7 @@ class LevelParser(object):
         self.links = []
         self.signs = []
         self.actors = []
+        self.baddies = []
         self.effects = []
 
         
@@ -235,6 +247,10 @@ class LevelParser(object):
         self.actors.append(Actor(x, y, image, src))
 
 
+    def add_baddy(self, x, y, kind, messages):
+        self.baddies.append(Baddy(x, y, kind, messages))
+
+
     def add_sign(self, x, y, text):
         self.signs.append(Sign(x, y, text))
 
@@ -247,6 +263,11 @@ class LevelParser(object):
         print "LEVEL LINKS:"
         for link in self.links:
             print " - {} -> {} {}".format(link.area, link.target, link.dest)
+        print
+        print
+        print "BADDIES:"
+        for baddy in self.baddies:
+            print " - {} {}".format((baddy.x, baddy.y), baddy.kind)
         print
         print
         print "SIGNS:"

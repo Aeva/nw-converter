@@ -154,16 +154,14 @@ class DotGraalParser(LevelParser):
         after_tiles = int(offset + math.ceil((bit_index / 8.0)))
         remainder = raw[after_tiles:]
 
-        def cut(stop, data):
-            pattern = r'^.*?' + stop
+        def cut(pattern, data):
             matcher = re.match(pattern, data, re.DOTALL | re.MULTILINE)
             found = matcher.group()
             return found, data[len(found):]
 
-        links, remainder = cut(r'^[^#]*?#', remainder)
+        links, remainder = cut(r'^[^#]*?#\n', remainder)
         if links:
             self.parse_links(links)
-        return
 
         # mystery, remainder = cut("\n\xff\xff\xff\n", remainder)
         # if mystery:
@@ -184,35 +182,38 @@ class DotGraalParser(LevelParser):
         #     # Actually
         #     return
 
-        # if self.version >= GR_1:
-        #     # GR-V1.01 seems to be when NPCs were introduced.
-        #     # Observations:
-        #     #
-        #     # - 0xA7 seems to be a command delimiter, instead of
-        #     #   semicolons.
-        #     #
-        #     # - Following a script are two "#\n"
-        #     #
-        #     # - After that is a block is binary encoded, but 0x80
-        #     #   shows up several several times in a way that stands
-        #     #   out.  It might be a delimeter, possibly for sign text,
-        #     #   though it might just be my imagination.
+        if self.version >= GR_1:
+            # GR-V1.01 seems to be when NPCs were introduced.
+            # Observations:
+            #
+            # - 0xA7 seems to be a command delimiter, instead of
+            #   semicolons.
+            #
+            # - Following a script are two "#\n"
+            #
+            # - After that is a block is binary encoded, but 0x80
+            #   shows up several several times in a way that stands
+            #   out.  It might be a delimeter, possibly for sign text,
+            #   though it might just be my imagination.
 
-        #     # - In one example though, 'mystery' and 'remainder' both
-        #     #   appear to contain a mix of ascii encoded characters
-        #     #   that spell out words and non-ascii.  I wonder if this
-        #     #   is baddy text or something?  That example does not
-        #     #   have NPCs, though.
+            # - In one example though, 'mystery' and 'remainder' both
+            #   appear to contain a mix of ascii encoded characters
+            #   that spell out words and non-ascii.  I wonder if this
+            #   is baddy text or something?  That example does not
+            #   have NPCs, though.
 
-        #     # - "\n\xff\xff\xff\x00\n#\n"?
+            # - "\n\xff\xff\xff\x00\n#\n"?
 
-        #     # - semicolons are also present in the npc block, so 0xA7
-        #     #   might actually be for newlines instead?
-        #     #
-        #     # - new line character seems to be the delimiter for
-        #     #   individual npcs
-        #     npcs, remainder = cut(r'^(..[^#]+#[^\n]+\n)+#', remainder)
-        #     self.parse_npcs(npcs)
+            # - semicolons are also present in the npc block, so 0xA7
+            #   might actually be for newlines instead?
+            #
+            # - new line character seems to be the delimiter for
+            #   individual npcs
+            baddies, remainder = cut(r'^(...[^\n\\]*?\\[^\n\\]*?\\[^\n\\]*?\n)*?\xff\xff\xff\n', remainder)
+            self.parse_baddies(baddies)
+
+            npcs, remainder = cut(r'^(..[^#]+#[^\n]+\n)*?#\n', remainder)
+            self.parse_npcs(npcs)
 
         
     def parse_links(self, blob):
@@ -221,6 +222,18 @@ class DotGraalParser(LevelParser):
         links = re.findall(pattern, blob, flags)
         for link_params in links:
             self.add_link(*link_params)
+
+
+    def parse_baddies(self, blob):
+        pattern = r'^(.)(.)(.)([^\n\\]*?)\\([^\n\\]*?)\\([^\n\\]*?)$'
+        flags = re.MULTILINE
+        baddies = re.findall(pattern, blob, flags)
+        for baddy in baddies:
+            # is guess
+            x, y, kind = map(ord, baddy[:3])
+            assert(kind <= 9)
+            strings = baddy[3:]
+            self.add_baddy(x, y, kind, strings)
 
 
     def parse_npcs(self, blob):
