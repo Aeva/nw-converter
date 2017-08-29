@@ -34,6 +34,5 @@ def load_level(level_path):
 
 
 def level_debug_info(level_path):
-    level = find_level_parser(level_path)
-    level.populate()
+    level = load_level(level_path)
     level.print_debug_info()
