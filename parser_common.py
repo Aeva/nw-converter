@@ -80,9 +80,12 @@ class Actor(object):
         if image:
             img_path = img_search(image)
             if img_path:
-                img = Image.open(img_path)
-                self.image = img_path
-                self.clip = [0, 0, img.size[0], img.size[1]]
+                try:
+                    img = Image.open(img_path)
+                    self.image = img_path
+                    self.clip = [0, 0, img.size[0], img.size[1]]
+                except:
+                    print "Cannot find file: %s" % img_path
         self.munge()
 
 
