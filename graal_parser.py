@@ -23,21 +23,25 @@ import struct
 from parser_common import LevelParser
 
 
-REVISIONS = ("Z3-V1.01", # <- untested
+REVISIONS = ("Z3-V1.00", # <- untested
+             "Z3-V1.01", # <- untested
              "Z3-V1.02", # <- untested
              "Z3-V1.03",
              "Z3-V1.04",
+             "GR-V1.00",
              "GR-V1.01",
              "GR-V1.02",
              "GR-V1.03")
 
-Z3_1 = 0
-Z3_2 = 1
-Z3_3 = 2
-Z3_4 = 3
-GR_1 = 4
-GR_2 = 5
-GR_3 = 6
+Z3_0 = 0
+Z3_1 = 1
+Z3_2 = 2
+Z3_3 = 3
+Z3_4 = 4
+GR_0 = 5
+GR_1 = 6
+GR_2 = 7
+GR_3 = 8
 
 
 class DotGraalParser(LevelParser):
@@ -226,7 +230,7 @@ class DotGraalParser(LevelParser):
 
     def parse_baddies(self, blob):
         pattern = r'^(.)(.)(.)([^\n\\]*?)\\([^\n\\]*?)\\([^\n\\]*?)$'
-        flags = re.MULTILINE
+        flags = re.DOTALL | re.MULTILINE
         baddies = re.findall(pattern, blob, flags)
         for baddy in baddies:
             # is guess
@@ -237,8 +241,8 @@ class DotGraalParser(LevelParser):
 
 
     def parse_npcs(self, blob):
-        pattern = r'^(.)(.)([^#]*)#(.*)$'
-        flags = re.MULTILINE
+        pattern = r'^(.)(.)([^#]*)#([^\n]*?)$'
+        flags = re.DOTALL | re.MULTILINE
         npcs = re.findall(pattern, blob, flags)
         for params in npcs:
             npc_x = ord(params[0])
