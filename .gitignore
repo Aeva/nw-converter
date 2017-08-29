@@ -10,5 +10,5 @@ out/
 *.csv
 *.pyc
 *.tmx
-test_corpus.txt
-test_failures.txt
+test_corpus*
+test_failures*

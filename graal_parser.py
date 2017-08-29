@@ -212,7 +212,7 @@ class DotGraalParser(LevelParser):
             baddies, remainder = cut(r'^(...[^\n\\]*?\\[^\n\\]*?\\[^\n\\]*?\n)*?\xff\xff\xff\n', remainder)
             self.parse_baddies(baddies)
 
-            npcs, remainder = cut(r'^(..[^#]+#[^\n]+\n)*?#\n', remainder)
+            npcs, remainder = cut(r'^(..[^#]*?#[^\n]+\n)*?#\n', remainder)
             self.parse_npcs(npcs)
 
         
