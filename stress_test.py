@@ -6,8 +6,15 @@ import time
 from util import load_level
 
 
-def test_file(path):
-    level = load_level(path)
+from multiprocessing import Pool, cpu_count
+
+
+def run_test(path):
+    try:
+        level = load_level(path)
+        return False
+    except:
+        return True
 
 
 if __name__ == "__main__":
@@ -25,16 +32,17 @@ if __name__ == "__main__":
         else:
             print "Skipping %s" % path
 
-    failures = []
-    for path in paths:
-        try:
-            test_file(path)
-        except:
-            failures.append(path)    
+    pool = Pool(max(cpu_count(), 2))
+    results = pool.map(run_test, paths)
 
     end = time.time()
     elapsed = end - start
-    print "Took {} seconds to parse {} files.".format(elapsed, len(paths))
+    print "Took {} seconds to test {} files.".format(elapsed, len(paths))
+
+    failures = []
+    for result, path in zip(results, paths):
+        if result:
+            failures.append(path)
 
     if failures:
         print " - %s files raised an exception." % len(failures)
