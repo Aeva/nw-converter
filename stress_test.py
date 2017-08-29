@@ -17,6 +17,9 @@ def run_test(path):
         return True
 
 
+PREVIEW_COUNT = 100
+PREVIEW_THRESHOLD = 1000
+
 if __name__ == "__main__":
     start = time.time()
     with open("test_corpus.txt", "r") as input_file:
@@ -33,8 +36,22 @@ if __name__ == "__main__":
             print "Skipping %s" % path
 
     pool = Pool(max(cpu_count(), 2))
-    results = pool.map(run_test, paths)
+    if len(paths) > PREVIEW_THRESHOLD:
+        sample = paths[:PREVIEW_COUNT]
+        remainder = paths[len(sample):]
 
+        est_start = time.time()
+        results = pool.map(run_test, sample)
+        est_end = time.time()
+        per_file = (est_end - est_start)/len(sample)
+        estimate = len(remainder) * per_file
+        print "Estimated completion time: %s" % time.strftime(
+            "%I:%M %p", time.localtime(estimate + time.time()))
+        
+        results += pool.map(run_test, remainder)
+    else:
+        results = pool.map(run_test, paths)
+        
     end = time.time()
     elapsed = end - start
     print "Took {} seconds to test {} files.".format(elapsed, len(paths))
