@@ -56,6 +56,7 @@ class DotGraalParser(LevelParser):
 
     
     def parse(self):
+        assert(self.version >= Z3_3)
         raw = open(self._uri, "r").read()
 
         # we start at 8 to seek just after the file header
@@ -164,60 +165,23 @@ class DotGraalParser(LevelParser):
             return found, data[len(found):]
 
         links, remainder = cut(r'^[^#]*?#\n', remainder)
-        if links:
-            self.parse_links(links)
+        self.parse_links(links)
 
-        # mystery, remainder = cut("\n\xff\xff\xff\n", remainder)
-        # if mystery:
-        #     # TODO what is this?
-        #     # sign text?  treasure boxes?  baddies?
-        #     pass
-
-        # if self.version <= Z3_4:
-        #     # TODO returning early for now, but it seems like 0xFFFFFF
-        #     # is a meaningful delimiter?  Some Z3-V1.04 files have at
-        #     # least two sections after block of level links.
-
-        #     # It seems in later revisons, sign text probably appears
-        #     # after NPC scripts, so the bit after 'mystery' is
-        #     # probably sign text, and 'mystery' is probably baddies or
-        #     # treasure boxes.
-
-        #     # Actually
-        #     return
+        baddies, remainder = cut(r'^(...[^\n\\]*?\\[^\n\\]*?\\[^\n\\]*?\n)*?\xff\xff\xff\n', remainder)
+        self.parse_baddies(baddies)
 
         if self.version >= GR_1:
-            # GR-V1.01 seems to be when NPCs were introduced.
-            # Observations:
-            #
-            # - 0xA7 seems to be a command delimiter, instead of
-            #   semicolons.
-            #
-            # - Following a script are two "#\n"
-            #
-            # - After that is a block is binary encoded, but 0x80
-            #   shows up several several times in a way that stands
-            #   out.  It might be a delimeter, possibly for sign text,
-            #   though it might just be my imagination.
-
-            # - In one example though, 'mystery' and 'remainder' both
-            #   appear to contain a mix of ascii encoded characters
-            #   that spell out words and non-ascii.  I wonder if this
-            #   is baddy text or something?  That example does not
-            #   have NPCs, though.
-
-            # - "\n\xff\xff\xff\x00\n#\n"?
-
-            # - semicolons are also present in the npc block, so 0xA7
-            #   might actually be for newlines instead?
-            #
-            # - new line character seems to be the delimiter for
-            #   individual npcs
-            baddies, remainder = cut(r'^(...[^\n\\]*?\\[^\n\\]*?\\[^\n\\]*?\n)*?\xff\xff\xff\n', remainder)
-            self.parse_baddies(baddies)
-
             npcs, remainder = cut(r'^(..[^#]*?#[^\n]*?\n)*?#\n', remainder)
             self.parse_npcs(npcs)
+
+            treasure, remainder = cut(r'^(....\n)*?#\n', remainder)
+            self.parse_treasure(treasure)
+
+        if self.version == GR_0:
+            mystery, remainder = cut(r'^([^#])#\n', remainder)
+            assert(len(mystery) == 0)
+
+        self.parse_signs(remainder)
 
         
     def parse_links(self, blob):
@@ -249,4 +213,34 @@ class DotGraalParser(LevelParser):
             npc_y = ord(params[1])
             npc_img = params[2]
             npc_src = params[3].replace("\xa7", "\n")
+            if self.version == GR_1 and not npc_img:
+                garbage = r'^(\xff|.*?\\.*?\\.*?)$'
+                if (re.match(garbage, npc_src) or not npc_src):
+                    continue
             self.add_actor(npc_x, npc_y, npc_img, npc_src)
+
+
+    def parse_treasure(self, blob):
+        pattern = r'^(.)(.)(.)(.)$'
+        flags = re.DOTALL | re.MULTILINE
+        treasures = re.findall(pattern, blob, flags)
+        for treasure in treasures:
+            x, y, kind, sign = map(lambda x: ord(x)-32, treasure)
+            if x >= -1 and x <= 63 and \
+               y >= -1 and y <= 63 and \
+               kind >= 0 and \
+               sign >= -1:
+                self.add_treasure(x, y, kind, sign)
+            else:
+                # garbage data >_<
+                break
+
+
+    def parse_signs(self, blob):
+        pattern = r'^(.)(.)([^\n]*)$'
+        flags = re.DOTALL | re.MULTILINE
+        signs = re.findall(pattern, blob, flags)
+        for sign in signs:
+            x, y, encoded = sign
+            bs = encoded.replace('\x80', '\n')
+            self.add_sign(ord(x), ord(y), bs)

@@ -189,6 +189,16 @@ class Baddy(object):
 
 
 
+class TreasureBox(object):
+    def __init__(self, x, y, kind, sign_index):
+        self.x = x
+        self.y = y
+        self.kind = kind
+        self.sign_index = sign_index
+
+
+
+
 class Sign(object):
     def __init__(self, x, y, text):
         self.text = text
@@ -222,6 +232,7 @@ class LevelParser(object):
         self.signs = []
         self.actors = []
         self.baddies = []
+        self.treasures = []
         self.effects = []
 
         
@@ -246,12 +257,16 @@ class LevelParser(object):
         self.links.append(link)
 
 
+    def add_baddy(self, x, y, kind, messages):
+        self.baddies.append(Baddy(x, y, kind, messages))
+
+        
     def add_actor(self, x, y, image, src):
         self.actors.append(Actor(x, y, image, src))
 
 
-    def add_baddy(self, x, y, kind, messages):
-        self.baddies.append(Baddy(x, y, kind, messages))
+    def add_treasure(self, x, y, kind, sign):
+        self.treasures.append(TreasureBox(x, y, kind, sign))
 
 
     def add_sign(self, x, y, text):
@@ -273,15 +288,21 @@ class LevelParser(object):
             print " - {} {}".format((baddy.x, baddy.y), baddy.kind)
         print
         print
-        print "SIGNS:"
-        for sign in self.signs:
-            print " - {} -> {}".format(self.area, self.text)
-        print
-        print
         print "ACTORS:"
         for actor in self.actors:
             print " - {} {}".format((actor.x, actor.y), actor.image)
             print actor.src
+        print
+        print
+        print "TREASURES:"
+        for treasure in self.treasures:
+            print " - {} {} {}".format((treasure.x, treasure.y),
+                                       treasure.kind, treasure.sign_index)
+        print
+        print
+        print "SIGNS:"
+        for sign in self.signs:
+            print " - {} -> {}".format(sign.area, sign.text)
         print
         print
 
