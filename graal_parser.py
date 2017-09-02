@@ -178,8 +178,8 @@ class DotGraalParser(LevelParser):
             self.parse_treasure(treasure)
 
         if self.version == GR_0:
-            mystery, remainder = cut(r'^([^#])#\n', remainder)
-            assert(len(mystery) == 0)
+            mystery, remainder = cut(r'^([^#])*#\n', remainder)
+            assert(mystery == "#\n")
 
         self.parse_signs(remainder)
 
