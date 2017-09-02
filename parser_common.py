@@ -35,6 +35,7 @@ GLYPHS += u">()"
 GLYPHS += u"\u2c0f" # glagolitic symbol
 GLYPHS += u"\u2c29" # glagolitic symbol
 GLYPHS += u"\u2c27" # glagolitic symbol
+GLYPHS += u'\u200B' # padding
 GLYPHS += u"\U0001F467" # person
 GLYPHS += u'"'
 GLYPHS += u"\U0001f839" # up
@@ -42,15 +43,15 @@ GLYPHS += u"\U0001f83b" # down
 GLYPHS += u"\U0001f838" # left
 GLYPHS += u"\U0001f83a" # right
 GLYPHS += u"':/~&#"
-GLYPHS += u"\x00" # escape code
+GLYPHS += u'\u200B' # padding, control code
 GLYPHS += u"\U0001F497" # heart
-GLYPHS += u"< "
+GLYPHS += u" <"
 GLYPHS += u"\u24b6" # circle A
 GLYPHS += u"\u24b7" # circle B
 GLYPHS += u"\u24cd" # circle X
 GLYPHS += u"\u24ce" # circle Y
 GLYPHS += u";"
-GLYPHS += u"\r\n"
+GLYPHS += u"\n"
 
 
 def setup_paths(sprites_path, output_path):
