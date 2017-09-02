@@ -17,22 +17,29 @@
 
 from nw_parser import DotNWParser
 from graal_parser import DotGraalParser
+from parser_common import UnknownFileHeader
 
 
 def find_level_parser(level_path):
     for parser in [DotNWParser, DotGraalParser]:
         try:
             return parser(level_path)
-        except AssertionError:
+        except UnknownFileHeader:
             continue
-    raise Exception("Unable to determine level file format: %s" % level_path)
+    raise UnknownFileHeader("Unable to determine level file format: %s" % level_path)
 
-def load_level(level_path):
+
+def load_level(level_path, text_only=False):
     level = find_level_parser(level_path)
-    level.populate()
+    level.populate(text_only)
     return level
 
 
 def level_debug_info(level_path):
     level = load_level(level_path)
     level.print_debug_info()
+
+
+def extract_text(level_path):
+    level = load_level(level_path, text_only=True)
+    return level.extract_text()

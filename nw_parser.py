@@ -19,7 +19,7 @@ import os
 import sys
 import string
 from PIL import Image
-from parser_common import LevelParser
+from parser_common import LevelParser, UnknownFileHeader
 
 
 BASE64 = string.ascii_uppercase + string.ascii_lowercase + string.digits + "+/"
@@ -32,11 +32,12 @@ class DotNWParser(LevelParser):
     """
 
     def file_version(self):
-        assert self.header == "GLEVNW01"
+        if not self.header == "GLEVNW01":
+            raise UnknownFileHeader("Unknown header: %s" % self.header)
         return 1
 
 
-    def parse(self):
+    def parse(self, text_only = False):
         with open(self._uri, "r") as reader:
             raw_data = reader.read().replace("\r\n", "\n")
             lines = raw_data.split("\n")
@@ -51,8 +52,9 @@ class DotNWParser(LevelParser):
                     x = i/2
                     encoded = data[i:i+2]
                     self.board[x][y] = self.decode_tile(encoded)
-        self.find_npcs(raw_data)
-        self.find_links(raw_data)
+        if not text_only:
+            self.find_npcs(raw_data)
+            self.find_links(raw_data)
         self.find_signs(raw_data)
 
     

@@ -17,7 +17,6 @@
 
 import os
 import re
-import string
 from PIL import Image
 
 
@@ -61,6 +60,14 @@ def img_search(img_name):
                 if filename == name + "." + ext:
                     return os.path.join(root, filename)
     return None
+
+
+
+
+class UnknownFileHeader(Exception):
+    pass
+
+
 
 
 class Actor(object):
@@ -203,7 +210,7 @@ class TreasureBox(object):
 class Sign(object):
     def __init__(self, x, y, text):
         self.text = text
-        self.area = (x, y, 2, 1) 
+        self.area = (x, y, 2, 1)
 
 
 
@@ -237,8 +244,8 @@ class LevelParser(object):
         self.effects = []
 
         
-    def populate(self):
-        self.parse()
+    def populate(self, text_only=False):
+        self.parse(text_only)
         self.actors.sort(self._actor_sort_fn)
         self.find_area_effects()
 
@@ -272,6 +279,10 @@ class LevelParser(object):
 
     def add_sign(self, x, y, text):
         self.signs.append(Sign(x, y, text))
+
+
+    def extract_text(self):
+        return [sign.text for sign in self.signs]
 
 
     def print_debug_info(self):

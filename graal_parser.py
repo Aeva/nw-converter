@@ -19,8 +19,9 @@ import re
 import sys
 import math
 import struct
+import string
 
-from parser_common import LevelParser, GLYPHS
+from parser_common import LevelParser, UnknownFileHeader
 
 
 REVISIONS = ("Z3-V1.00", # <- untested
@@ -53,16 +54,16 @@ GLYPHS += u">()"
 GLYPHS += u"\u2c0f" # glagolitic symbol
 GLYPHS += u"\u2c29" # glagolitic symbol
 GLYPHS += u"\u2c27" # glagolitic symbol
-GLYPHS += u'\u200B' # padding
+GLYPHS += u'\u200b' # padding
 GLYPHS += u"\U0001F467" # person
 GLYPHS += u'"'
-GLYPHS += u"\U0001f839" # up
-GLYPHS += u"\U0001f83b" # down
-GLYPHS += u"\U0001f838" # left
-GLYPHS += u"\U0001f83a" # right
+GLYPHS += u"\U0001f845" # up
+GLYPHS += u"\U0001f847" # down
+GLYPHS += u"\U0001f844" # left
+GLYPHS += u"\U0001f846" # right
 GLYPHS += u"':/~&#"
-GLYPHS += u'\u200B' # padding, control code
-GLYPHS += u"\U0001F497" # heart
+GLYPHS += u'\u200b' # padding, control code
+GLYPHS += u"\U0001f497" # heart
 GLYPHS += u" <"
 GLYPHS += u"\u24b6" # circle A
 GLYPHS += u"\u24b7" # circle B
@@ -79,11 +80,12 @@ class DotGraalParser(LevelParser):
     """
 
     def file_version(self):
-        assert(self.header in REVISIONS)
+        if not self.header in REVISIONS:
+            raise UnknownFileHeader("Unknown header: %s" % self.header)
         return REVISIONS.index(self.header)
 
     
-    def parse(self):
+    def parse(self, text_only = False):
         assert(self.version >= Z3_3)
         raw = open(self._uri, "r").read()
 
@@ -193,21 +195,25 @@ class DotGraalParser(LevelParser):
             return found, data[len(found):]
 
         links, remainder = cut(r'^[^#]*?#\n', remainder)
-        self.parse_links(links)
+        if not text_only:
+            self.parse_links(links)
 
-        baddies, remainder = cut(r'^(...[^\n\\]*?\\[^\n\\]*?\\[^\n\\]*?\n)*?\xff\xff\xff\n', remainder)
-        self.parse_baddies(baddies)
+        baddies, remainder = cut(r'^(...([^\n\\]*?\\[^\n\\]*?\\[^\n\\]*?)?\n)*?\xff\xff\xff\n', remainder)
+        if not text_only:
+            self.parse_baddies(baddies)
 
         if self.version >= GR_1:
             npcs, remainder = cut(r'^(..[^#]*?#[^\n]*?\n)*?#\n', remainder)
-            self.parse_npcs(npcs)
+            if not text_only:
+                self.parse_npcs(npcs)
 
             treasure, remainder = cut(r'^(....\n)*?#\n', remainder)
-            self.parse_treasure(treasure)
+            if not text_only:
+                self.parse_treasure(treasure)
 
-        if self.version == GR_0:
-            mystery, remainder = cut(r'^([^#])*#\n', remainder)
-            assert(mystery == "#\n")
+            if self.version == GR_0:
+                mystery, remainder = cut(r'^([^#])*#\n', remainder)
+                assert(mystery == "#\n")
 
         self.parse_signs(remainder)
 
