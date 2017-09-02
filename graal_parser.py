@@ -33,6 +33,7 @@ REVISIONS = ("Z3-V1.00", # <- untested
              "GR-V1.02",
              "GR-V1.03")
 
+
 Z3_0 = 0
 Z3_1 = 1
 Z3_2 = 2
@@ -42,6 +43,33 @@ GR_0 = 5
 GR_1 = 6
 GR_2 = 7
 GR_3 = 8
+
+
+GLYPHS = string.uppercase + string.lowercase + string.digits
+GLYPHS = GLYPHS.encode("utf-8")
+GLYPHS += u"!?-.,"
+GLYPHS += u"\u2026" # ellipsis
+GLYPHS += u">()"
+GLYPHS += u"\u2c0f" # glagolitic symbol
+GLYPHS += u"\u2c29" # glagolitic symbol
+GLYPHS += u"\u2c27" # glagolitic symbol
+GLYPHS += u'\u200B' # padding
+GLYPHS += u"\U0001F467" # person
+GLYPHS += u'"'
+GLYPHS += u"\U0001f839" # up
+GLYPHS += u"\U0001f83b" # down
+GLYPHS += u"\U0001f838" # left
+GLYPHS += u"\U0001f83a" # right
+GLYPHS += u"':/~&#"
+GLYPHS += u'\u200B' # padding, control code
+GLYPHS += u"\U0001F497" # heart
+GLYPHS += u" <"
+GLYPHS += u"\u24b6" # circle A
+GLYPHS += u"\u24b7" # circle B
+GLYPHS += u"\u24cd" # circle X
+GLYPHS += u"\u24ce" # circle Y
+GLYPHS += u";"
+GLYPHS += u"\n"
 
 
 class DotGraalParser(LevelParser):
