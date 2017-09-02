@@ -20,7 +20,7 @@ import sys
 import math
 import struct
 
-from parser_common import LevelParser
+from parser_common import LevelParser, GLYPHS
 
 
 REVISIONS = ("Z3-V1.00", # <- untested
@@ -209,8 +209,8 @@ class DotGraalParser(LevelParser):
         flags = re.DOTALL | re.MULTILINE
         npcs = re.findall(pattern, blob, flags)
         for params in npcs:
-            npc_x = ord(params[0])
-            npc_y = ord(params[1])
+            npc_x = ord(params[0]) - 32
+            npc_y = ord(params[1]) - 32
             npc_img = params[2]
             npc_src = params[3].replace("\xa7", "\n")
             if self.version == GR_1 and not npc_img:
@@ -240,7 +240,24 @@ class DotGraalParser(LevelParser):
         pattern = r'^(.)(.)([^\n]*)$'
         flags = re.DOTALL | re.MULTILINE
         signs = re.findall(pattern, blob, flags)
+
         for sign in signs:
-            x, y, encoded = sign
-            bs = encoded.replace('\x80', '\n')
-            self.add_sign(ord(x), ord(y), bs)
+            params = sign
+            x = ord(params[0]) - 32
+            y = ord(params[1]) - 32
+            data = re.findall(r'(v\*e[^f]*f|.)', params[2])
+            text = u''
+            for char in data:
+                if len(char) > 1:
+                    # The escape sequence for arbitrary character
+                    # codes is a control code, followed by what
+                    # decodes to "K(number)".  The integer parsed from
+                    # the embeded numeric string is then the character
+                    # code for the symbol.
+                    values = map(lambda x: GLYPHS[ord(x)-32], char[3:-1])
+                    text += chr(int(''.join(values)))
+                else:
+                    # Char value is a sprite.
+                    text += GLYPHS[ord(char)-32]
+
+            self.add_sign(x, y, text)
