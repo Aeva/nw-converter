@@ -18,6 +18,7 @@
 import os
 import re
 from PIL import Image
+from script_munger import find_immediates
 
 
 TILE_SIZE = 16
@@ -119,6 +120,9 @@ class Actor(object):
         Search through the provided script file and attempt to determine
         parameters for rendering this Actor.
         """
+        tokens = [token + ";" for token in find_immediates(self.src)]
+        init_block = "\n".join(tokens)
+        
         offset_patterns = {}
         offset_patterns['x'] = [
             r'^ *x ?(=) ?((?:x? ?[\d/*+\-. ]+)|(?:[\d/*+\-. ]+ ?x?)) ?;',
@@ -131,31 +135,31 @@ class Actor(object):
         moved = False
         for axis, patterns in offset_patterns.items():
             for refex in patterns:
-                found = re.search(regex, self.src, flags)
+                found = re.search(regex, init_block, flags)
                 if found:
                     self.__move(axis, found)
                 moved = True
                 break
             
-        if self.src.count("setimgpart") or self.src.count("setgifpart"):
+        if init_block.count("setimgpart") or init_block.count("setgifpart"):
             pattern = r'set(?:img|gif)part ([^\s]+?) ?, ?([\d/*+-]+) ??, ?([\d/*+-]+) ??, ?([\d/*+-]+) ??, ?([\d/*+-]+) ?;'
-            found = re.findall(pattern, self.src)
+            found = re.findall(pattern, init_block)
             if found:
                 self.image = img_search(found[0][0])
                 self.clip = map(lambda x: eval(x), found[0][1:])
 
-        if self.src.count("drawaslight;"):
+        if init_block.count("drawaslight;"):
             self.layer = 2
 
-        elif self.src.count("drawunderplayer;"):
+        elif init_block.count("drawunderplayer;"):
             self.layer = -1
 
-        elif self.src.count("drawoverplayer;"):
+        elif init_block.count("drawoverplayer;"):
             self.layer = 1
         
-        if self.src.count("setcoloreffect"):
+        if init_block.count("setcoloreffect"):
             pattern = r'setcoloreffect ?([\d/*.+-]+) ?, ?([\d/*.+-]+)?, ?([\d/*.+-]+)?, ?([\d/*.+-]+);'
-            found = re.findall(pattern, self.src)
+            found = re.findall(pattern, init_block)
             if found:
                 try:
                     self.effect = map(lambda x: eval(x) if len(x) > 0 else 0.0, found[0])
@@ -163,9 +167,9 @@ class Actor(object):
                     print "error parsing:", found[0]
                     self.image = None
 
-        if self.src.count("setzoomeffect"):
+        if init_block.count("setzoomeffect"):
             pattern = r'setzoomeffect ?([\d/*.+-]+) ?;'
-            found = re.findall(pattern, self.src)
+            found = re.findall(pattern, init_block)
             if found:
                 zoom = float(eval(found[0]))
                 old_width = self.clip[2]
@@ -176,7 +180,7 @@ class Actor(object):
                 new_y = self.y + (((new_height - old_height) / 2.0) * -1) / TILE_SIZE
                 self.zoom = [new_x, new_y, new_width, new_height, zoom]
 
-        if self.src.count("join flickerlights;"):
+        if init_block.count("join flickerlights;"):
             # 2k1-specific hack.  possibly should just hide images
             # with the word "light" in them if they don't call set
             # effect, but only on levels where at least one npc uses

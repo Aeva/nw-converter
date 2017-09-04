@@ -18,7 +18,9 @@
 import re
 
 
-def find_blocks(src, start=0, nesting=0, scope=[]):
+def find_blocks(src, start=0, nesting=0, scope=None):
+    if not scope:
+        scope = []
     seek = start;
     accumulate = ''
     while seek < (len(src)):
@@ -29,7 +31,7 @@ def find_blocks(src, start=0, nesting=0, scope=[]):
             seek += (chunk.end() - chunk.start())
             text, event = chunk.groups()
             assert(text.count("}") == 0)
-            if event:
+            if event.strip():
                 if event == '{':
                     if accumulate:
                         scope.append(accumulate)
@@ -40,44 +42,65 @@ def find_blocks(src, start=0, nesting=0, scope=[]):
                     continue
                     
                 accumulate += text
-                if event:
-                    accumulate += event
+                accumulate += event
                                         
                 if event == '}':
-                    scope.append(accumulate)
+                    if accumulate:
+                        scope.append(accumulate)
                     if nesting != 0:
                         return seek, scope
                     else:
                         print "unexpected closing parenthesis"
+            else:
+                accumulate += text
+                if event:
+                    accumulate += event
         else:
             print "error parsing script, returning early"
+            if accumulate:
+                scope.append(accumulate)
             if nesting == 0:
                 return scope
             else:
                 return len(src), scope
+    if accumulate:
+        scope.append(accumulate)
     return scope
 
 
-def find_init_commands(src):
+def find_immediates(src):
+    """
+    Return a flat list of tokens representing commands that could be
+    executed immediately upon opening the level without any game
+    state.  This includes anything that is not in a conditional block,
+    and the contents of conditional blocks where the condition is only
+    one of "playerenters" or "created".
+    """
     blocks = find_blocks(src)
-    found = None
+    found = []
+    pattern = r'^\s*if\s*\(\s*(created|playerenters)\s*\)\s*{\s*$'
     for index, block in enumerate(blocks):
         if block and type(block) == list:
             first = block[0]
             if first and type(first) == unicode:
                 first = first.encode("utf-8")
             if first and type(first) == str:
-                if re.match(r'^\s*if\s*\(\s*playerenters\s*\)\s*{\s*$',
-                            first):
-                    found = block
-                    break
+                if re.match(pattern, first, re.IGNORECASE):
+                    found.append(block)
+        if block and type(block) in [str, unicode]:
+            found.append([block])
 
-    reduced = [chunk for chunk in found if type(chunk) == str]
-    flattened = '\n'.join(reduced)
-    narrowed = re.match(
-        r'(?:\A.*?{)(.*)(?:}.*?\Z)', flattened,
-        re.MULTILINE | re.DOTALL).groups()[0]
+    reduced = []
+    for block in found:
+        tokens = [chunk for chunk in block if type(chunk) == str]
+        flattened = '\n'.join(tokens)
+        narrowed = re.match(
+            r'(?:\A.*?{)(.*)(?:}.*?\Z)', flattened,
+            re.MULTILINE | re.DOTALL)
+        if narrowed:
+            flattened = narrowed.groups()[0]
+        commands = re.split(r'(?:\n|;)', flattened)
+        reduced += [command.strip() for command in commands if
+                    command.strip()]
 
-    commands = re.split(r'(?:\n|;)', narrowed)
-    reduced = [command.strip() for command in commands if command.strip()]
     return reduced
