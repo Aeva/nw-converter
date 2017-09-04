@@ -25,7 +25,7 @@ def find_blocks(src, start=0, nesting=0, scope=None):
     accumulate = ''
     while seek < (len(src)):
         chunk = re.match(
-            r'^(.*?)({|}|\n|\Z|//.*?\n\Z|//\*.*?\*//)',
+            r'^(.*?)({|}|\n|\Z|//.*?(?:\n|\Z)|/\*.*?(?:\*/|\Z))',
             src[seek:], re.MULTILINE | re.DOTALL)
         if chunk:
             seek += (chunk.end() - chunk.start())
@@ -65,7 +65,10 @@ def find_blocks(src, start=0, nesting=0, scope=None):
                 return len(src), scope
     if accumulate:
         scope.append(accumulate)
-    return scope
+    if nesting == 0:
+        return scope
+    else:
+        return len(src), scope
 
 
 def find_immediates(src):

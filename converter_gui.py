@@ -21,6 +21,7 @@ import re
 import sys
 import time
 import urllib
+import traceback
 from threading import Thread
 from multiprocessing import Pool, cpu_count
 import gi
@@ -40,14 +41,22 @@ def run_jobs(window, converter, jobs):
         scope["processed"] += 1
         GLib.idle_add(window.advance_progress, scope["processed"])
 
+    def error_handler(converter, *params):
+        try:
+            converter(*params)
+        except Exception as error:
+            print "JOB FAILED:"
+            print params
+            traceback.print_exc()
+
     start = time.time()
-    pool = Pool(max(cpu_count(), 2))
+    #pool = Pool(max(cpu_count(), 2))
     for job in jobs:
-        job_callback(converter(*job))
+        job_callback(error_handler(converter, *job))
         #pool.apply_async(converter, job, callback=job_callback)
 
-    pool.close()
-    pool.join()
+    #pool.close()
+    #pool.join()
     GLib.idle_add(window.conclude_progress, time.time()-start)
 
     
