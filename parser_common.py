@@ -45,15 +45,14 @@ def relative_img_path(long_path):
         SPRITES_RELATIVE, os.path.relpath(long_path, SPRITES_PATH))
 
 
-def img_search(img_name):
+def file_search(name, extensions):
     """
     This method recursively searches the "sprites" directory for the
     first image file that matches img_name, and returns its path.
 
     This is used for looking up the sprite needed to draw NPCs.
     """
-    name = ".".join(img_name.split(".")[:-1])
-    extensions = ["png", "gif"]
+    name = ".".join(name.split(".")[:-1])
     tree = os.walk(SPRITES_PATH, True, None, True)
     for root, dirnames, filenames in tree:
         for filename in filenames:
@@ -61,6 +60,10 @@ def img_search(img_name):
                 if filename == name + "." + ext:
                     return os.path.join(root, filename)
     return None
+
+
+def img_search(img_name):
+    return file_search(img_name, ["png", "gif"])
 
 
 
@@ -120,8 +123,23 @@ class Actor(object):
         Search through the provided script file and attempt to determine
         parameters for rendering this Actor.
         """
-        tokens = [token + ";" for token in find_immediates(self.src)]
-        init_block = "\n".join(tokens)
+        
+        def reduce_src(src):
+            tokens = [token + ";" for token in find_immediates(src)]
+            return "\n".join(tokens)
+        
+        init_block = reduce_src(self.src)
+
+        join_pattern = r'^join (.*?);'
+        join_matches = re.findall(join_pattern, init_block, re.MULTILINE)
+        if join_matches:
+            for match in join_matches:
+                path = file_search(match + ".txt", ["txt"])
+                if path:
+                    raw = open(path, 'r').read()
+                    init_block += '\n' + reduce_src(raw);
+                else:
+                    print "Can't find script: %s.txt" % match
         
         offset_patterns = {}
         offset_patterns['x'] = [
@@ -179,13 +197,6 @@ class Actor(object):
                 new_x = self.x + (((new_width - old_width) / 2.0) * -1) / TILE_SIZE
                 new_y = self.y + (((new_height - old_height) / 2.0) * -1) / TILE_SIZE
                 self.zoom = [new_x, new_y, new_width, new_height, zoom]
-
-        if init_block.count("join flickerlights;"):
-            # 2k1-specific hack.  possibly should just hide images
-            # with the word "light" in them if they don't call set
-            # effect, but only on levels where at least one npc uses
-            # seteffect.
-            self.image = None
 
 
 
