@@ -137,8 +137,8 @@ class Actor(object):
                 moved = True
                 break
             
-        if self.src.count("setimgpart"):
-            pattern = r'setimgpart ([^\s]+?) ?, ?([\d/*+-]+) ??, ?([\d/*+-]+) ??, ?([\d/*+-]+) ??, ?([\d/*+-]+) ?;'
+        if self.src.count("setimgpart") or self.src.count("setgifpart"):
+            pattern = r'set(?:img|gif)part ([^\s]+?) ?, ?([\d/*+-]+) ??, ?([\d/*+-]+) ??, ?([\d/*+-]+) ??, ?([\d/*+-]+) ?;'
             found = re.findall(pattern, self.src)
             if found:
                 self.image = img_search(found[0][0])
@@ -193,6 +193,54 @@ class Baddy(object):
         self.kind = kind
         assert(len(messages) == 3)
         self.messages = messages
+
+    def make_fake_actor(self):
+        fake = Actor(self.x - 0.5, self.y - 1, 'opps.png', '')
+        
+        if self.kind in [0, 1, 2]:
+            # grey, blue, red
+            fake.clip = [self.kind * 44, 0, 44, 64]
+            return fake
+
+        elif self.kind == 3:
+            # blue, but shooty
+            fake.clip = [44 * 3, 0, 44, 50] 
+            return fake
+
+        elif self.kind == 4:
+            # grey, but shooty
+            fake.clip = [0, 66, 52, 58]
+            fake.x -= 1
+            return fake
+
+        elif self.kind == 5:
+            # frog
+            fake.clip = [52, 66, 24, 26]
+            return fake
+
+        elif self.kind == 6:
+            # spider
+            fake.clip = [52, 100, 32, 34]
+            return fake
+
+        elif self.kind == 7:
+            # yellow
+            fake.clip = [84, 64, 44, 66]
+            return fake
+
+        elif self.kind == 8:
+            # lizard boy
+            fake.clip = [132, 50, 44, 65]
+            return fake
+
+        elif self.kind == 9:
+            # other lizard boy
+            fake.clip = [132, 115, 44, 56]
+            return fake
+
+        else:
+            # error?
+            pass
 
 
 

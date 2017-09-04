@@ -156,6 +156,10 @@ def convert_to_png(level_path, tiles_path, sprites_path, out_path):
             layers["normal"].append(actor)
         else:
             layers["light"].append(actor)
+
+    for baddy in level.baddies:
+        actor = baddy.make_fake_actor()
+        layers["normal"].append(actor)
     
     add_actors(out_img, layers["normal"])
     if len(level.effects) == 1:
