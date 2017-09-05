@@ -17,6 +17,7 @@
 
 import os
 import re
+import hashlib
 from PIL import Image
 from script_munger import find_immediates
 
@@ -80,6 +81,7 @@ class Actor(object):
     """
     
     def __init__(self, x, y, image, src):
+        self.original_inputs = [x, y, image, src]
         self.src = src
         self.image = None
         self.x = x
@@ -204,6 +206,7 @@ class Actor(object):
 
 class Baddy(object):
     def __init__(self, x, y, kind, messages):
+        self.original_input = [x, y, kind, messages]
         self.x = x
         self.y = y
         self.kind = kind
@@ -273,6 +276,7 @@ class TreasureBox(object):
 
 class Sign(object):
     def __init__(self, x, y, text):
+        self.original_inputs = [x, y, text]
         self.text = text
         self.area = (x, y, 2, 1)
 
@@ -347,6 +351,37 @@ class LevelParser(object):
 
     def extract_text(self):
         return [sign.text for sign in self.signs]
+
+
+    def tile_hash(self):
+        """
+        Used for quickly comparing two levels to see if they have
+        identical tile arrangements.
+        """
+        return hashlib.sha1(str(self.board)).hexdigest()
+
+
+    def content_hash(self):
+        """
+        Used for quickly comparing two levels to see if they have the same
+        npcs, text, and baddies.
+
+        Level links and treasure boxes are omitted here.
+        """
+        combined = ''
+        for entity in self.actors + self.baddies + self.signs:
+            combined += str(entity.original_inputs)
+        return hashlib.sha1(str(combined)).hexdigest()
+
+
+    def level_hash(self):
+        """
+        Returns a hash for fuzzy level comparison.  This does not include
+        level links or treasures, and is only really intended to be
+        useful for png or text export, so as to be able to skip over
+        approximate duplicates.
+        """
+        return "{}:{}".format(self.tile_hash(), self.content_hash())
 
 
     def print_debug_info(self):
