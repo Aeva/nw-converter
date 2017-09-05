@@ -158,7 +158,10 @@ class Actor(object):
                     self.__move(axis, found)
                 moved = True
                 break
-            
+
+        if init_block.count('hide;'):
+            self.image = None
+
         if init_block.count("setimgpart") or init_block.count("setgifpart"):
             pattern = r'set(?:img|gif)part ([^\s]+?) ?, ?([\d/*+-]+) ??, ?([\d/*+-]+) ??, ?([\d/*+-]+) ??, ?([\d/*+-]+) ?;'
             found = re.findall(pattern, init_block)
@@ -197,9 +200,6 @@ class Actor(object):
                 new_x = self.x + (((new_width - old_width) / 2.0) * -1) / TILE_SIZE
                 new_y = self.y + (((new_height - old_height) / 2.0) * -1) / TILE_SIZE
                 self.zoom = [new_x, new_y, new_width, new_height, zoom]
-
-        if init_block.count('hide;'):
-            self.image = None
 
 
 class Baddy(object):

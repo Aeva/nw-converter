@@ -81,15 +81,26 @@ def find_immediates(src):
     """
     blocks = find_blocks(src)
     found = []
-    pattern = r'^\s*if\s*\(\s*(created|playerenters)\s*\)\s*{\s*$'
+    pattern = r'^\s*if\s*\(\s*(.*?)\s*\)\s*{\s*$'
     for index, block in enumerate(blocks):
         if block and type(block) == list:
             first = block[0]
             if first and type(first) == unicode:
                 first = first.encode("utf-8")
             if first and type(first) == str:
-                if re.match(pattern, first, re.IGNORECASE):
-                    found.append(block)
+                conditional = re.match(pattern, first)
+                if conditional:
+                    condition = conditional.groups()[0]
+                    parts = re.split(r'(?:&&|\|\||\s+)', condition)
+                    include_block = False
+                    for part in parts:
+                        if part in ['playerenters', 'created', 'isleader']:
+                            include_block = True
+                        else:
+                            include_block = False
+                            break
+                    if include_block:
+                        found.append(block)
         if block and type(block) in [str, unicode]:
             found.append([block])
 
