@@ -198,7 +198,8 @@ class Actor(object):
                 new_y = self.y + (((new_height - old_height) / 2.0) * -1) / TILE_SIZE
                 self.zoom = [new_x, new_y, new_width, new_height, zoom]
 
-
+        if init_block.count('hide;'):
+            self.image = None
 
 
 class Baddy(object):
