@@ -56,6 +56,7 @@ class DotNWParser(LevelParser):
             self.find_npcs(raw_data)
             self.find_links(raw_data)
             self.find_baddies(raw_data)
+            self.find_treasures(raw_data)
         self.find_signs(raw_data)
 
     
@@ -85,7 +86,7 @@ class DotNWParser(LevelParser):
 
     
     def find_npcs(self, raw_data):
-        pattern = r'^NPC ([^\s]+) (\d+) (\d+)$(.+?)NPCEND$'
+        pattern = r'^NPC ([^\s]+) (-?\d+) (-?\d+)$(.+?)NPCEND$'
         flags = re.DOTALL | re.MULTILINE
         npcs = re.findall(pattern, raw_data, flags)
         for npc in npcs:
@@ -104,7 +105,7 @@ class DotNWParser(LevelParser):
 
 
     def find_baddies(self, raw_data):
-        pattern = r'^BADDY (\d+) (\d+) (\d+)\n([^\n]*)\n([^\n]*)\n([^\n]*)\nBADDYEND$'
+        pattern = r'^BADDY (-?\d+) (-?\d+) (\d+)\n([^\n]*)\n([^\n]*)\n([^\n]*)\nBADDYEND$'
         flags = re.MULTILINE
         baddies = re.findall(pattern, raw_data, flags)
         for baddy in baddies:
@@ -113,8 +114,19 @@ class DotNWParser(LevelParser):
             self.add_baddy(x, y, kind, messages)
 
 
+    def find_treasures(self, raw_data):
+        pattern=r'^CHEST (-?\d+) (-?\d+) (.*) (-?\d+)$'
+        flags = re.MULTILINE
+        treasures = re.findall(pattern, raw_data, flags)
+        for treasure in treasures:
+            x, y = map(int, treasure[:2])
+            item = treasure[2]
+            sign = int(treasure[3])
+            self.add_treasure(x, y, item, sign)
+        
+
     def find_signs(self, raw_data):
-        pattern = r'^SIGN (\d+) (\d+)$(.+?)SIGNEND$'
+        pattern = r'^SIGN (-?\d+) (-?\d+)$(.+?)SIGNEND$'
         flags = re.DOTALL | re.MULTILINE
         signs = re.findall(pattern, raw_data, flags)
         for sign in signs:
