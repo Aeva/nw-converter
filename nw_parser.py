@@ -55,6 +55,7 @@ class DotNWParser(LevelParser):
         if not text_only:
             self.find_npcs(raw_data)
             self.find_links(raw_data)
+            self.find_baddies(raw_data)
         self.find_signs(raw_data)
 
     
@@ -100,6 +101,16 @@ class DotNWParser(LevelParser):
         links = re.findall(pattern, raw_data, flags)
         for link_params in links:
             self.add_link(*link_params)
+
+
+    def find_baddies(self, raw_data):
+        pattern = r'^BADDY (\d+) (\d+) (\d+)\n([^\n]*)\n([^\n]*)\n([^\n]*)\nBADDYEND$'
+        flags = re.MULTILINE
+        baddies = re.findall(pattern, raw_data, flags)
+        for baddy in baddies:
+            x, y, kind = map(int, baddy[:3])
+            messages = baddy[3:]
+            self.add_baddy(x, y, kind, messages)
 
 
     def find_signs(self, raw_data):
