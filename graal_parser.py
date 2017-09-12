@@ -73,6 +73,34 @@ GLYPHS += u";"
 GLYPHS += u"\n"
 
 
+TREASURES = [
+    "greenrupee",
+    "bluerupee",
+    "redrupee",
+    "bombs",
+    "darts",
+    "heart",
+    "glove1",
+    "bomb",
+    "shield",
+    "sword",
+    "fullheart",
+    "superbomb",
+    "battleaxe",
+    "goldensword",
+    "mirrorshield",
+    "glove2",
+    "lizardshield",
+    "lizardsword",
+    "goldrupee",
+    "fireball",
+    "fireblast",
+    "nukeshot",
+    "joltbomb",
+    "spinattack",
+    ]
+
+
 class DotGraalParser(LevelParser):
     """
     This class takes a path to a .graal encoded file, decodes it, and
@@ -262,9 +290,9 @@ class DotGraalParser(LevelParser):
             x, y, kind, sign = map(lambda x: ord(x)-32, treasure)
             if x >= -1 and x <= 63 and \
                y >= -1 and y <= 63 and \
-               kind >= 0 and \
+               kind >= 0 and kind < len(TREASURES) and \
                sign >= -1:
-                self.add_treasure(x, y, kind, sign)
+                self.add_treasure(x, y, TREASURES[kind], sign)
             else:
                 # garbage data >_<
                 break
