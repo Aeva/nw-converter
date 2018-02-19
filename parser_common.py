@@ -80,7 +80,7 @@ class Actor(object):
     Represents an interactible game object.
     """
     
-    def __init__(self, x, y, image, src):
+    def __init__(self, x, y, image, src, fastmode):
         self.original_inputs = [x, y, image, src]
         self.src = src
         self.image = None
@@ -91,6 +91,9 @@ class Actor(object):
         self.effect = None
         self.layer = 0
 
+        if fastmode:
+            return
+            
         if image:
             img_path = img_search(image)
             if img_path:
@@ -311,11 +314,15 @@ class LevelParser(object):
         self.treasures = []
         self.effects = []
 
+        self._fastmode = False
+
         
-    def populate(self, text_only=False):
+    def populate(self, text_only=False, fastmode=False):
         self.parse(text_only)
         self.actors.sort(self._actor_sort_fn)
         self.find_area_effects()
+
+        self._fastmode = fastmode
 
         
     def file_version(self):
@@ -338,7 +345,7 @@ class LevelParser(object):
 
         
     def add_actor(self, x, y, image, src):
-        self.actors.append(Actor(x, y, image, src))
+        self.actors.append(Actor(x, y, image, src, self._fastmode))
 
 
     def add_treasure(self, x, y, kind, sign):
