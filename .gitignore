@@ -12,3 +12,5 @@ out/
 *.tmx
 test_corpus*
 test_failures*
+playlist.txt
+level_db.pickle
