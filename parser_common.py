@@ -18,6 +18,7 @@
 import os
 import re
 import hashlib
+import itertools
 from PIL import Image
 from script_munger import find_immediates
 
@@ -368,6 +369,17 @@ class LevelParser(object):
         return hashlib.sha1(str(self.board)).hexdigest()
 
 
+    def pallet_hash(self):
+        """
+        Hash of the set of tiles used in a level's board.  Two levels with
+        different arrangements but which use the same tiles will have a
+        different pallet hash.
+        """
+        pallet = list(set(itertools.chain.from_iterable(self.board)))
+        pallet.sort()
+        return hashlib.sha1(str(pallet)).hexdigest()
+
+
     def content_hash(self):
         """
         Used for quickly comparing two levels to see if they have the same
@@ -388,7 +400,10 @@ class LevelParser(object):
         useful for png or text export, so as to be able to skip over
         approximate duplicates.
         """
-        return "{}:{}".format(self.tile_hash(), self.content_hash())
+        combined = str(self.board)
+        for entity in self.actors + self.baddies + self.signs:
+            combined += str(entity.original_inputs)
+        return hashlib.sha1(str(combined)).hexdigest()
 
 
     def print_debug_info(self):

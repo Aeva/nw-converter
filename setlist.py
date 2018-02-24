@@ -2,10 +2,15 @@ import os
 import sys
 import time
 import random
+import cPickle as pickle
 from multiprocessing import Pool
 from sh import find
 from util import load_level
 from parser_common import UnknownFileHeader
+
+
+# Generate a new UUID to invalidate an old level database.
+DATABASE_VERSION = "37590c47-f652-4cb8-864e-db18c0e5e5e7"
 
 
 def process_level(path):
@@ -36,164 +41,252 @@ def process_level(path):
             doors.append(link.target)
     
     if north or east or south or west:
-        edges = [north, east, south, west]
+        edges = (north, east, south, west)
 
-    return level.level_hash(), path, edges, doors or None
+    return {
+        "level_hash" : level.level_hash(),
+        "pallet_hash" : level.pallet_hash(),
+        "path" : path,
+        "doors" : doors,
+        "edges" : edges,
+        "signs" : len(level.signs),
+        "actors" : len(level.actors),
+        "baddies" : len(level.baddies),
+        "treasures" : len(level.treasures),
+    }
 
 
-def cut_path(path, base_path):
-    if path.startswith(base_path):
-        return path[len(base_path):]
-    else:
-        return path
-    
+def build_level_database(input_path):
+    print "Generating or regenerating level database."
+    print "This may take a long time if a lot of files need to be scanned."
+    paths = [p.strip() for p in find(input_path)]
 
-if __name__ == "__main__":
-    start = time.time()
-    paths = [p.strip() for p in find(sys.argv[1])]
-
-    levels = {}
-    level_edges = {}
-    level_doors = {}
+    levels = []
     pool = Pool(processes=4)
 
+    ratio = 100.0 / len(paths)
+    processed = 0
+    last_percent = 0
     for data in pool.imap_unordered(process_level, paths):
+        processed += 1
+        percent = int(processed * ratio)
+        if percent > last_percent:
+            last_percent = percent
+            print "... {}%".format(percent)
+        
         if not data:
             continue
-        level_hash, path, edges, doors = data
+        levels.append(data)
 
-        if levels.has_key(level_hash):
+    db = {
+        "levels" : levels,
+        "version" : DATABASE_VERSION,
+    }
+
+    with open("level_db.pickle", "w") as outfile:
+        pickle.dump(db, outfile)
+
+
+def load_level_database():
+    db = None
+    failed = False
+    try:
+        with open("level_db.pickle", "r") as infile:
+            db = pickle.load(infile)
+            if db["version"] != DATABASE_VERSION:
+                failed = True
+                print "Level database needs to be regenerated!"
+    except IOError:
+        failed = True
+        print "No level database found!"
+    if failed:
+        print """
+Re-run this script with the argument "--scan" followed by a path to
+a folder containing all of the levels you wish to scan.
+""".strip()
+        exit(1)
+    return db
+
+
+def load_corpus():
+    db = load_level_database()
+    def sort_fn(level):
+        return level["level_hash"] + ":" + level["path"]
+
+    boring = []
+    duplicates = []
+    by_hash = {}
+    by_path = {}
+    for level in sorted(db["levels"], key=sort_fn):
+        short_path = os.path.split(level["path"])[-1]
+        level_hash = level["level_hash"]
+        if by_hash.has_key(level_hash):
+            # we'll use this path as an alias to the other level in
+            # case anything links to it
+            other = by_hash[level_hash]
+            by_path[short_path] = other
+            duplicates.append(level)
             continue
-        else:
-            short_path = cut_path(path, sys.argv[1])
-            levels[level_hash] = short_path
-            level_edges[short_path] = edges
-            level_doors[short_path] = doors
 
-    elapsed = time.time() - start
-    print "level analysis elapsed time in minutes:", elapsed / 60.0
-    print "generating set list now"
+        things = level["signs"] + \
+                 level["actors"] + \
+                 level["baddies"] + \
+                 level["treasures"]
+        if things == 0:
+            # check to see if the pallet is "boring" and possibly skip
+            # the level since it doesn't really have anything in it
+            pass
 
-    paths = levels.values()
+        by_hash[level_hash] = level
+        by_path[short_path] = level
+        
+    return boring, duplicates, by_hash, by_path
+    
+
+
+def generate_setlist(output_path):
+    print "Generating level playlist..."
+
+    boring, duplicates, by_hash, by_path = load_corpus()
+
+    unprocessed = by_hash.keys()
     queue = []
-
-    random.seed(12345)
-    random.shuffle(paths)
 
     quad_count = 0
     pair_count = 0
     ungrouped_count = 0
 
-    output_path = sys.argv[2] if len(sys.argv) > 2 else "playlist.txt"
+    def find(key):
+        # accepts either level hash or path part
+        if by_path.has_key(key):
+            key = by_path[key]["level_hash"]
+        if by_hash.has_key(key):
+            try:
+                return unprocessed.index(key), by_hash[key]
+            except ValueError:
+                pass
+        return -1, None
+
+    def edge_search(level):
+        # this attempts to find near by levels to group together
+
+        if not level["edges"]:
+            return None
+
+        left_of = find(level["edges"][1])[1]
+        right_of = find(level["edges"][3])[1]
+
+        if not left_of or right_of:
+            return None
+
+        east = left_of if left_of else level
+        west = level if left_of else right_of
+        ne_level, nw_level, se_level, sw_level = None, None, None, None
+
+        # FIXME if we selecte a duplicate alias in the east/west pair,
+        # then the quad will be bogus, because the links will line up
+        # wrong.
+
+        if east["edges"][2] and west["edges"][2]:
+            ne_level, nw_level = east, west
+            se_level = find(east["edges"][2])[1]
+            sw_level = find(west["edges"][2])[1]
+
+        elif east["edges"][0] and west["edges"][0]:
+            se_level, sw_level = east, west
+            ne_level = find(east["edges"][0])[1]
+            nw_level = find(west["edges"][0])[1]
+
+        if ne_level and nw_level and se_level and sw_level:
+            return (ne_level, nw_level, se_level, sw_level)
+        
+        else:
+            return (east, west)
+        
+
     with open(output_path, "w") as setlist:
-        while len(paths) + len(queue) > 0:
+        while len(unprocessed) + len(queue) > 0:
             pick = None
             if len(queue):
                 pick = queue.pop(0)
             else:
-                pick = paths.pop(0)
+                pick = unprocessed.pop(0)
+            level = by_hash[pick]
 
-            quad = False
-            pair = False
-
-            edges = level_edges[pick]
-            doors = level_doors[pick]
-
-            if edges:
-                # See if pick is the north west corner of a 2x2 square
-                # of likely mapped levels.  We know east and south
-                # already, so we just need to confirm that they're
-                # available and then determine what the southeast
-                # corner is.  Otherwise, just take a horizontal
-                # neighbor and don't bother with the quad.
-
-                north, east, south, west = edges
-                diagonal = None
-                ne_index, sw_index, se_index = None, None, None
-
-                try:
-                    ne_index = paths.index(east)
-                    sw_index = paths.index(south)
-                except:
-                    pass
-
-                if ne_index is not None and sw_index is not None:
-                    try:
-                        east_of_south = level_edges[south][1]
-                        south_of_east = level_edges[east][2]
-                        if east_of_south == south_of_east:
-                            diagonal = east_of_south
-                            se_index = paths.index(east_of_south)
-                    except:
-                        diagonal = None
-
-                if diagonal:
-                    paths.pop(ne_index)
-                    paths.pop(sw_index)
-                    paths.pop(se_index)
-
-                    setlist.write("*** quad ***\n")
-                    setlist.write(pick + "\n")
-                    setlist.write(east + "\n")
-                    setlist.write(south + "\n")
-                    setlist.write(diagonal + "\n")
-
-                    quad = True
+            edges = []
+            edge_odds = 0.30
+            adjacent_group = edge_search(level)
+            if adjacent_group:
+                if len(adjacent_group) == 2:
+                    pair_count += 1
+                    setlist.write("*** pair ***\n")
+                    edge_odds = 0.20
+                elif len(adjacent_group) == 4:
                     quad_count += 1
-
-                else:
-                    # For whatever reason, we couldn't complete a
-                    # quad, so try to take a horizontal neighbor
-                    # instead.
-
-                    adjacent = None
-                    try:
-                        adjacent = paths.index(west)
-                        pair = (pick, west)
-                    except:
+                    setlist.write("*** quad ***\n")
+                    edge_odds = 0.10
+                for tile in adjacent_group:
+                    corrupted = False # HACK
+                    if not tile is level:
                         try:
-                            adjacent = paths.index(east)
-                            pair = (east, pick)
+                            index = unprocessed.index(tile["level_hash"])
+                            unprocessed.pop(index)
                         except:
-                            pass
-                    if pair:
-                        pair_count += 1
-                        paths.pop(adjacent)
-                        setlist.write("*** pair ***\n")
-                        setlist.write(pair[0] + "\n")
-                        setlist.write(pair[1] + "\n")
-
-            if doors:# and random.random() < 0.75:
-                for link in doors:
-                    found = None
-                    try:
-                        found = paths.index(door)
-                    except:
-                        pass
-                    if found:
-                        queue.append(paths.pop(found))
-
-            if edges:
-                # last, regardless of what happened regarding quads
-                # and pairs, have a chance of throwing the remaining
-                # edges into the queue:
-                for edge in edges:
-                    if edge and random.random() < 0.25:
-                        found = None
-                        try:
-                            found = paths.index(edge)
-                        except:
-                            pass
-                        if found:
-                            queue.append(paths.pop(found))
-
-            if not quad and not pair:
+                            corrupted = True # HACK 
+                    setlist.write(tile["path"] + "\n")
+                    edges += tile["edges"]
+                if corrupted: # HACK
+                    print "(known bug) quad is likely wrong because of duplicate aliasing:"
+                    for tile in adjacent_group:
+                        print " ***", tile["path"] 
+            else:
                 ungrouped_count += 1
-                setlist.write(pick + "\n")
+                edges = level["edges"]
+                setlist.write(level["path"] + "\n")
+
+            if level["doors"]:
+                # add all levels linked by doors into the queue
+                for target in level["doors"]:
+                    index, found = find(target)
+                    if found:
+                        queue.append(unprocessed.pop(index))
+
+            # small chance of adding neighbors into the queue
+            if edges:
+                for edge_path in edges:
+                    if edge_path:
+                        edge_index, edge_level = find(edge_path)
+                        if edge_level and random.random() < edge_odds:
+                            queue.append(unprocessed.pop(edge_index))
+
+    if boring:
+        print "Skipped \"boring\" levels:"
+        for level in boring:
+            print " -", level["path"]
+    if duplicates:
+        print "Skipped non-unique levels:"
+        for level in duplicates:
+            print " -", level["path"]
 
     print "quads found:", quad_count
     print "pairs found:", pair_count
     print "individuals:", ungrouped_count
     print "total tweets:", quad_count + pair_count + ungrouped_count
     print "total levels:", quad_count * 4 + pair_count * 2 + ungrouped_count
-    print "done!"
+
+
+if __name__ == "__main__":
+    random.seed(12345)
+    start = time.time()
+    if len(sys.argv) > 1 and sys.argv[1] == "--scan":
+        assert(len(sys.argv) == 3)
+        build_level_database(sys.argv[2])
+    else:
+        output_path = sys.argv[1] if len(sys.argv) > 1 else "playlist.txt"
+        generate_setlist(output_path)
+    elapsed = time.time() - start
+    print "Process complete."
+    if elapsed > 60:
+        print "Elapsed time in minutes:", elapsed / 60.0
+    else:
+        print "Elapsed time in seconds:", elapsed
