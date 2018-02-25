@@ -139,6 +139,9 @@ def load_corpus():
             duplicates[level_hash].append(level)
         else:
             by_hash[level_hash] = level
+
+    for dupe_group in duplicates.values():
+        dupe_group.sort(key=sort_fn)
         
     return boring, duplicates, by_hash, by_path
     
@@ -279,6 +282,20 @@ def generate_setlist(output_path):
             for edge_path in set(edges):
                 if random.random() <= edge_odds:
                     enqueue(edge_path)
+
+    if duplicates:
+        print "Duplicate levels which have been merged together:"
+
+        def path_for_key(key):
+            return os.path.split(by_hash[key]["path"])[-1]
+
+        for path in sorted(map(path_for_key, duplicates.keys())):
+            level_hash = by_path[path]["level_hash"]
+            dupe_group = duplicates[level_hash]
+            count = len(dupe_group) + 1
+            print " + {} ({}x, hash = {})".format(path, count, level_hash)
+            for dupe in dupe_group:
+                print "   -", os.path.split(dupe["path"])[-1]
 
     print "quads found:", quad_count
     print "pairs found:", pair_count
