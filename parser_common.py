@@ -65,6 +65,8 @@ def file_search(name, extensions):
 
 
 def img_search(img_name):
+    if img_name.endswith(".txt"):
+        return None
     return file_search(img_name, ["png", "gif"])
 
 
