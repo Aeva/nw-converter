@@ -114,31 +114,31 @@ def load_corpus():
         return level["level_hash"] + ":" + level["path"]
 
     boring = []
-    duplicates = []
+    duplicates = {}
     by_hash = {}
     by_path = {}
     for level in sorted(db["levels"], key=sort_fn):
         short_path = os.path.split(level["path"])[-1]
         level_hash = level["level_hash"]
-        if by_hash.has_key(level_hash):
-            # we'll use this path as an alias to the other level in
-            # case anything links to it
-            other = by_hash[level_hash]
-            by_path[short_path] = other
-            duplicates.append(level)
-            continue
+        by_path[short_path] = level
 
         things = level["signs"] + \
                  level["actors"] + \
                  level["baddies"] + \
                  level["treasures"]
         if things == 0:
-            # check to see if the pallet is "boring" and possibly skip
-            # the level since it doesn't really have anything in it
+            # TODO : Check the pallet hash to see if the level is
+            # likely "boring" since it doesn't have anything else in
+            # it.  If it is boring, we should still include it in the
+            # by_path list, but not in by_hash.
             pass
-
-        by_hash[level_hash] = level
-        by_path[short_path] = level
+        
+        if by_hash.has_key(level_hash):
+            if not duplicates.has_key(level_hash):
+                duplicates[level_hash] = []
+            duplicates[level_hash].append(level)
+        else:
+            by_hash[level_hash] = level
         
     return boring, duplicates, by_hash, by_path
     
@@ -149,6 +149,8 @@ def generate_setlist(output_path):
 
     boring, duplicates, by_hash, by_path = load_corpus()
 
+    visited = []
+    paths_written = []
     unprocessed = by_hash.keys()
     queue = []
 
@@ -157,24 +159,53 @@ def generate_setlist(output_path):
     ungrouped_count = 0
 
     def find(key):
-        # accepts either level hash or path part
+        # accepts either the level name or hash
+        if key is None:
+            return None
+        assert(type(key) == str)
+        found = None
         if by_path.has_key(key):
-            key = by_path[key]["level_hash"]
-        if by_hash.has_key(key):
-            try:
-                return unprocessed.index(key), by_hash[key]
-            except ValueError:
-                pass
-        return -1, None
+            found = by_path[key]
+        elif by_hash.has_key(key):
+            found = by_hash[key]
+        if found and found["level_hash"] not in visited:
+            return found
+        return None
 
+    def take_level(setlist, level):
+        level_hash = level["level_hash"]
+        visited.append(level_hash)
+        try:
+            queue.remove(level_hash)
+        except:
+            pass
+        try:
+            unprocessed.remove(level_hash)
+        except:
+            pass
+        assert(level["path"] not in paths_written)
+        paths_written.append(level["path"])
+        setlist.write(level["path"] + "\n")
+
+    def enqueue(hash_or_path):
+        level = find(hash_or_path)
+        if level:
+            level_hash = level["level_hash"]
+            try:
+                unprocessed.remove(level_hash)
+            except:
+                pass
+            if level_hash not in queue and level_hash not in visited:
+                queue.append(level_hash)
+        
     def edge_search(level):
         # this attempts to find near by levels to group together
 
         if not level["edges"]:
             return None
 
-        left_of = find(level["edges"][1])[1]
-        right_of = find(level["edges"][3])[1]
+        left_of = find(level["edges"][1])
+        right_of = find(level["edges"][3])
 
         if not left_of or right_of:
             return None
@@ -183,26 +214,21 @@ def generate_setlist(output_path):
         west = level if left_of else right_of
         ne_level, nw_level, se_level, sw_level = None, None, None, None
 
-        # FIXME if we selecte a duplicate alias in the east/west pair,
-        # then the quad will be bogus, because the links will line up
-        # wrong.
-
         if east["edges"][2] and west["edges"][2]:
             ne_level, nw_level = east, west
-            se_level = find(east["edges"][2])[1]
-            sw_level = find(west["edges"][2])[1]
+            se_level = find(east["edges"][2])
+            sw_level = find(west["edges"][2])
 
         elif east["edges"][0] and west["edges"][0]:
             se_level, sw_level = east, west
-            ne_level = find(east["edges"][0])[1]
-            nw_level = find(west["edges"][0])[1]
+            ne_level = find(east["edges"][0])
+            nw_level = find(west["edges"][0])
 
         if ne_level and nw_level and se_level and sw_level:
             return (ne_level, nw_level, se_level, sw_level)
         
         else:
             return (east, west)
-        
 
     with open(output_path, "w") as setlist:
         while len(unprocessed) + len(queue) > 0:
@@ -211,8 +237,10 @@ def generate_setlist(output_path):
                 pick = queue.pop(0)
             else:
                 pick = unprocessed.pop(0)
-            level = by_hash[pick]
 
+            level = find(pick)
+            assert(level is not None)
+            
             edges = []
             edge_odds = 0.30
             adjacent_group = edge_search(level)
@@ -226,47 +254,22 @@ def generate_setlist(output_path):
                     setlist.write("*** quad ***\n")
                     edge_odds = 0.10
                 for tile in adjacent_group:
-                    corrupted = False # HACK
-                    if not tile is level:
-                        try:
-                            index = unprocessed.index(tile["level_hash"])
-                            unprocessed.pop(index)
-                        except:
-                            corrupted = True # HACK 
-                    setlist.write(tile["path"] + "\n")
+                    take_level(setlist, tile)
                     edges += tile["edges"]
-                if corrupted: # HACK
-                    print "(known bug) quad is likely wrong because of duplicate aliasing:"
-                    for tile in adjacent_group:
-                        print " ***", tile["path"] 
             else:
                 ungrouped_count += 1
-                edges = level["edges"]
-                setlist.write(level["path"] + "\n")
+                edges = level["edges"] or []
+                take_level(setlist, level)
 
             if level["doors"]:
                 # add all levels linked by doors into the queue
                 for target in level["doors"]:
-                    index, found = find(target)
-                    if found:
-                        queue.append(unprocessed.pop(index))
+                    enqueue(target)
 
             # small chance of adding neighbors into the queue
-            if edges:
-                for edge_path in edges:
-                    if edge_path:
-                        edge_index, edge_level = find(edge_path)
-                        if edge_level and random.random() < edge_odds:
-                            queue.append(unprocessed.pop(edge_index))
-
-    if boring:
-        print "Skipped \"boring\" levels:"
-        for level in boring:
-            print " -", level["path"]
-    if duplicates:
-        print "Skipped non-unique levels:"
-        for level in duplicates:
-            print " -", level["path"]
+            for edge_path in set(edges):
+                if random.random() <= edge_odds:
+                    enqueue(edge_path)
 
     print "quads found:", quad_count
     print "pairs found:", pair_count
