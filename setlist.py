@@ -204,14 +204,19 @@ def generate_setlist(output_path):
         if not level["edges"]:
             return None
 
-        left_of = find(level["edges"][1])
-        right_of = find(level["edges"][3])
+        right_of = find(level["edges"][1])
+        left_of = find(level["edges"][3])
 
-        if not left_of or right_of:
+        east, west = None, None
+        if right_of:
+            east = right_of
+            west = level
+        elif left_of:
+            east = level
+            west = left_of
+        else:
             return None
 
-        east = left_of if left_of else level
-        west = level if left_of else right_of
         ne_level, nw_level, se_level, sw_level = None, None, None, None
 
         if east["edges"][2] and west["edges"][2]:
@@ -225,10 +230,14 @@ def generate_setlist(output_path):
             nw_level = find(west["edges"][0])
 
         if ne_level and nw_level and se_level and sw_level:
-            return (ne_level, nw_level, se_level, sw_level)
-        
+            return (nw_level, ne_level, sw_level, se_level)
         else:
-            return (east, west)
+            return (west, east)
+
+    if by_path.has_key('onlinestartlocal.graal'):
+        enqueue('onlinestartlocal.graal')
+    elif by_path.has_key('level1.graal'):
+        enqueue('level1.graal')
 
     with open(output_path, "w") as setlist:
         while len(unprocessed) + len(queue) > 0:
@@ -255,7 +264,7 @@ def generate_setlist(output_path):
                     edge_odds = 0.10
                 for tile in adjacent_group:
                     take_level(setlist, tile)
-                    edges += tile["edges"]
+                    edges += tile["edges"] or []
             else:
                 ungrouped_count += 1
                 edges = level["edges"] or []
